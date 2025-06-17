@@ -166,7 +166,6 @@
 
       pointLight = new THREE.PointLight(0xffffff, 2, 200);
       pointLight.position.copy(sphere.position);
-      scene.add(pointLight);
 
       window.addEventListener('resize', () => {
         camera.aspect = window.innerWidth / window.innerHeight;
