@@ -11,8 +11,8 @@
       overflow: hidden;
       background: black;
       font-family: 'Quantico', sans-serif;
-      letter-spacing: 1px;
       color: white;
+      letter-spacing: 1px;
     }
 
     #controls {
@@ -25,30 +25,7 @@
       align-items: center;
     }
 
-    #addTrackBtn {
-      background: transparent;
-      color: white;
-      border: none;
-      font-size: 22px;
-      padding: 4px 12px;
-      cursor: pointer;
-      font-family: 'Quantico', sans-serif;
-      transition: background 0.2s ease;
-    }
-
-    #addTrackBtn:hover {
-      background: rgba(255, 255, 255, 0.2);
-    }
-
-    #trackSelect {
-      background: black;
-      color: white;
-      border: 1px solid white;
-      padding: 6px 8px;
-      font-size: 14px;
-      font-family: 'Quantico', sans-serif;
-    }
-
+    #addTrackBtn,
     #playPauseBtn {
       background: black;
       color: white;
@@ -56,6 +33,19 @@
       padding: 6px 12px;
       font-size: 16px;
       cursor: pointer;
+    }
+
+    #addTrackBtn {
+      font-size: 22px;
+      padding: 4px 12px;
+    }
+
+    #trackSelect {
+      background: black;
+      color: white;
+      border: 1px solid white;
+      padding: 6px 8px;
+      font-family: 'Quantico', sans-serif;
     }
 
     #seekBar {
@@ -74,33 +64,11 @@
       border-radius: 50%;
       border: none;
     }
-
-    .ball {
-      position: absolute;
-      top: 20%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 100px;
-      height: 100px;
-      border-radius: 50%;
-      background: radial-gradient(circle at center, white 0%, #00ffff 40%, transparent 70%);
-      box-shadow:
-        0 0 20px #00ffff,
-        0 0 60px #00ffff,
-        0 0 100px #00ffff;
-      transition: transform 0.1s ease-out;
-      pointer-events: none;
-      z-index: 5;
-    }
   </style>
 </head>
 
 <body>
 
-  <!-- Glowing CSS Sphere -->
-  <div class="ball" id="ball"></div>
-
-  <!-- Audio Controls -->
   <div id="controls">
     <button id="addTrackBtn">+</button>
     <select id="trackSelect">
@@ -117,7 +85,6 @@
 
   <audio id="audio"></audio>
 
-  <!-- Three.js -->
   <script type="importmap">
     {
       "imports": {
@@ -130,18 +97,18 @@
     import * as THREE from 'three';
 
     let scene, camera, renderer, terrain, analyser, dataArray;
+    let sphere, glowSphere, glowMaterial, pointLight;
+
     const audio = document.getElementById('audio');
     const playPauseBtn = document.getElementById("playPauseBtn");
     const trackSelect = document.getElementById("trackSelect");
     const seekBar = document.getElementById("seekBar");
-    const cssBall = document.getElementById("ball");
 
     const cols = 64, rows = 64, terrainWidth = 300, terrainDepth = 800;
     const geometry = new THREE.PlaneGeometry(terrainWidth, terrainDepth, cols - 1, rows - 1);
     geometry.rotateX(-Math.PI / 2);
-
-    const material = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true });
-    terrain = new THREE.Mesh(geometry, material);
+    const terrainMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true });
+    terrain = new THREE.Mesh(geometry, terrainMaterial);
 
     function init() {
       scene = new THREE.Scene();
@@ -152,7 +119,38 @@
       renderer = new THREE.WebGLRenderer({ antialias: true });
       renderer.setSize(window.innerWidth, window.innerHeight);
       document.body.appendChild(renderer.domElement);
+
       scene.add(terrain);
+
+      // Create glowing sphere
+      const sphereGeometry = new THREE.SphereGeometry(10, 64, 64);
+      const sphereMaterial = new THREE.MeshStandardMaterial({
+        color: 0xffffff,
+        emissive: 0xffffff,
+        emissiveIntensity: 1.5,
+        roughness: 0.3,
+        metalness: 0.1
+      });
+      sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+      sphere.position.set(0, 50, 0);
+      scene.add(sphere);
+
+      // Add glow shell
+      glowMaterial = new THREE.MeshBasicMaterial({
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0.15,
+        side: THREE.BackSide,
+        blending: THREE.AdditiveBlending
+      });
+      glowSphere = new THREE.Mesh(new THREE.SphereGeometry(12, 64, 64), glowMaterial);
+      glowSphere.position.copy(sphere.position);
+      scene.add(glowSphere);
+
+      // Add point light
+      pointLight = new THREE.PointLight(0xffffff, 2, 200);
+      pointLight.position.copy(sphere.position);
+      scene.add(pointLight);
 
       window.addEventListener('resize', () => {
         camera.aspect = window.innerWidth / window.innerHeight;
@@ -178,26 +176,6 @@
       source.connect(analyser);
       analyser.connect(audioCtx.destination);
     }
-
-    playPauseBtn.onclick = () => {
-      if (audio.paused) {
-        audio.play();
-        playPauseBtn.textContent = '⏸';
-      } else {
-        audio.pause();
-        playPauseBtn.textContent = '▶';
-      }
-    };
-
-    trackSelect.onchange = () => loadTrack(trackSelect.value);
-
-    seekBar.addEventListener('input', () => seekBar.dragging = true);
-    seekBar.addEventListener('change', () => {
-      audio.currentTime = (seekBar.value / 100) * audio.duration;
-      seekBar.dragging = false;
-    });
-
-    audio.onended = () => playPauseBtn.textContent = '▶';
 
     function animate() {
       requestAnimationFrame(animate);
@@ -229,10 +207,13 @@
           seekBar.value = (audio.currentTime / audio.duration) * 100;
         }
 
-        // Bass pulse
+        // Bass visual scaling
         const bassAvg = dataArray.slice(0, 10).reduce((a, b) => a + b, 0) / 10;
         const scale = 1 + (bassAvg / 255) * 2;
-        cssBall.style.transform = `translate(-50%, -50%) scale(${scale})`;
+        sphere.scale.set(scale, scale, scale);
+        glowSphere.scale.set(scale * 1.2, scale * 1.2, scale * 1.2);
+        glowMaterial.opacity = 0.1 + 0.2 * Math.sin(performance.now() * 0.005);
+        pointLight.intensity = 1.5 + (bassAvg / 255) * 0.5;
       }
 
       renderer.render(scene, camera);
@@ -260,6 +241,26 @@
         loadTrack(url);
       }
     };
+
+    playPauseBtn.onclick = () => {
+      if (audio.paused) {
+        audio.play();
+        playPauseBtn.textContent = '⏸';
+      } else {
+        audio.pause();
+        playPauseBtn.textContent = '▶';
+      }
+    };
+
+    trackSelect.onchange = () => loadTrack(trackSelect.value);
+
+    seekBar.addEventListener('input', () => seekBar.dragging = true);
+    seekBar.addEventListener('change', () => {
+      audio.currentTime = (seekBar.value / 100) * audio.duration;
+      seekBar.dragging = false;
+    });
+
+    audio.onended = () => playPauseBtn.textContent = '▶';
   </script>
 </body>
 
