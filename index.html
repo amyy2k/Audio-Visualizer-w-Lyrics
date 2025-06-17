@@ -59,22 +59,11 @@
       border: none;
     }
 
-    #flash {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      pointer-events: none;
-      z-index: 1;
-      background: white;
-      opacity: 0;
-      transition: opacity 0.1s ease-out;
-    }
 
     #addTrackBtn {
   background: transparent;
   color: white;
+  border: 1px solid white;
   font-size: 20px;
   padding: 4px 10px;
   cursor: pointer;
@@ -100,9 +89,6 @@
   </div>
 
 
-  <!-- Flash overlay -->
-  <div id="flash"></div>
-  <audio id="audio"></audio>
 
   <!-- Importmap + JS -->
   <script type="importmap">
@@ -121,13 +107,15 @@
     const playPauseBtn = document.getElementById("playPauseBtn");
     const trackSelect = document.getElementById("trackSelect");
     const seekBar = document.getElementById("seekBar");
-    const flash = document.getElementById("flash");
 
     const cols = 64, rows = 64, terrainWidth = 300, terrainDepth = 800;
     const geometry = new THREE.PlaneGeometry(terrainWidth, terrainDepth, cols - 1, rows - 1);
     geometry.rotateX(-Math.PI / 2);
 
-    const material = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true });
+    const material = new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+      wireframe: true
+    });
     terrain = new THREE.Mesh(geometry, material);
 
     function init() {
@@ -222,13 +210,6 @@
         if (!seekBar.dragging && audio.duration) {
           seekBar.value = (audio.currentTime / audio.duration) * 100;
         }
-
-        // Glow and flash effect
-        const bass = dataArray.slice(0, 10).reduce((a, b) => a + b, 0) / 10;
-        const intensity = Math.min(1, bass / 200);
-        material.emissive.setRGB(intensity, intensity, intensity);
-        flash.style.opacity = intensity > 0.5 ? intensity * 0.3 : 0;
-      }
 
       renderer.render(scene, camera);
     }
