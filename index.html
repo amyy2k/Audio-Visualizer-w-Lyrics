@@ -219,8 +219,14 @@ scene.add(glow1, glow2, glow3);
       const bass = dataArray.slice(0, 10).reduce((sum, val) => sum + val, 0) / 10;
       const scale = 1 + (bass / 255) * 2;
       sphere.scale.set(scale, scale, scale);
-      glow.scale.set(scale * 1.5, scale * 1.5, scale * 1.5);
-      glow.material.opacity = 0.2 + (bass / 255) * 0.5;
+      glow1.scale.set(scale * 1.3, scale * 1.3, scale * 1.3);
+      glow2.scale.set(scale * 1.6, scale * 1.6, scale * 1.6);
+      glow3.scale.set(scale * 1.9, scale * 1.9, scale * 1.9);
+
+      glow1.material.opacity = 0.15 + (bass / 255) * 0.2;
+      glow2.material.opacity = 0.05 + (bass / 255) * 0.1;
+      glow3.material.opacity = 0.02 + (bass / 255) * 0.05;
+
 
     }
 
