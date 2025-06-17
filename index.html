@@ -161,13 +161,13 @@ const spriteMaterial = new THREE.SpriteMaterial({
   transparent: true,
   blending: THREE.AdditiveBlending
 });
-const sprite = new THREE.Sprite(spriteMaterial);
+sprite = new THREE.Sprite(spriteMaterial);  // use the global 'sprite'
 sprite.scale.set(30, 30, 1); // Adjust size to match the glow you want
 sprite.position.copy(sphere.position);
 scene.add(sprite);
 
 // Point light for realistic illumination
-const pointLight = new THREE.PointLight(0x00ffff, 2.5, 200);
+pointLight = new THREE.PointLight(0x00ffff, 2.5, 200); // use the global 'pointLight'
 pointLight.position.copy(sphere.position);
 scene.add(pointLight);
 
