@@ -119,19 +119,27 @@
 
     scene.add(terrain);
 
-    // Glowing sun-like sphere
-    const sphereGeometry = new THREE.SphereGeometry(10, 32, 32);
-    const sphereMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
-    sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
-    sphere.position.set(0, 50, 0);
-    scene.add(sphere);
+// Main glowing sun-like sphere
+const sphereGeometry = new THREE.SphereGeometry(10, 64, 64);
+const coreMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+const sphere = new THREE.Mesh(sphereGeometry, coreMaterial);
+sphere.position.set(0, 50, 0);
+scene.add(sphere);
 
-    // Glow halo
-    const glowGeometry = new THREE.SphereGeometry(11, 32, 32);
-    const glowMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.2 });
-    glow = new THREE.Mesh(glowGeometry, glowMaterial);
-    glow.position.copy(sphere.position);
-    scene.add(glow);
+// Outer glow layers
+const glowMaterial1 = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.15 });
+const glowMaterial2 = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.05 });
+const glowMaterial3 = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.02 });
+
+const glow1 = new THREE.Mesh(new THREE.SphereGeometry(12, 64, 64), glowMaterial1);
+const glow2 = new THREE.Mesh(new THREE.SphereGeometry(14, 64, 64), glowMaterial2);
+const glow3 = new THREE.Mesh(new THREE.SphereGeometry(16, 64, 64), glowMaterial3);
+
+glow1.position.copy(sphere.position);
+glow2.position.copy(sphere.position);
+glow3.position.copy(sphere.position);
+
+scene.add(glow1, glow2, glow3);
 
     window.addEventListener('resize', () => {
       camera.aspect = window.innerWidth / window.innerHeight;
