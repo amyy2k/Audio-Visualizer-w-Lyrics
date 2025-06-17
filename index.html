@@ -212,7 +212,6 @@
         const scale = 1 + (bassAvg / 255) * 2;
         sphere.scale.set(scale, scale, scale);
         glowSphere.scale.set(scale * 1.2, scale * 1.2, scale * 1.2);
-        glowMaterial.opacity = 0.1 + 0.2 * Math.sin(performance.now() * 0.005);
         pointLight.intensity = 1.5 + (bassAvg / 255) * 0.5;
       }
 
