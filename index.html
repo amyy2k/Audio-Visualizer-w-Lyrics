@@ -120,7 +120,9 @@
     const geometry = new THREE.PlaneGeometry(terrainWidth, terrainDepth, cols - 1, rows - 1);
     geometry.rotateX(-Math.PI / 2);
 
-    const material = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true });
+const glow = new THREE.PointLight(0x00ffff, 2, 150);
+glow.position.copy(sphere.position);
+scene.add(glow);
     terrain = new THREE.Mesh(geometry, material);
 
     init();
@@ -135,6 +137,14 @@
       renderer.setSize(window.innerWidth, window.innerHeight);
       document.body.appendChild(renderer.domElement);
       scene.add(terrain);
+      // Glowing sphere
+const sphereGeometry = new THREE.SphereGeometry(10, 32, 32);
+const sphereMaterial = new THREE.MeshBasicMaterial({
+  color: 0x00ffff,
+});
+const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+sphere.position.set(0, 30, 0);
+scene.add(sphere);
 
       window.addEventListener('resize', () => {
         camera.aspect = window.innerWidth / window.innerHeight;
@@ -217,6 +227,19 @@
           seekBar.value = (audio.currentTime / audio.duration) * 100;
         }
       }
+
+      // Get average of lower frequencies (bass)
+let bassSum = 0;
+let bassCount = 10; // number of bins to use from the low end
+for (let i = 0; i < bassCount; i++) {
+  bassSum += dataArray[i];
+}
+const bassAvg = bassSum / bassCount;
+
+// Scale the sphere based on bass
+const scale = 1 + (bassAvg / 255) * 2; // ranges from 1 to 3
+sphere.scale.set(scale, scale, scale);
+
 
       renderer.render(scene, camera);
     }
