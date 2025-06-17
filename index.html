@@ -151,14 +151,14 @@
       sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
       sphere.position.set(0, 90, 0);
       scene.add(sphere);
+
+      // Glow with feathered texture
+      const glowTexture = createFeatheredGlowTexture();
+      glowMaterial = new THREE.MeshBasicMaterial({
         map: glowTexture,
         transparent: true,
         blending: THREE.AdditiveBlending,
         depthWrite: false
-      // Glow with feathered texture
-      const glowTexture = createFeatheredGlowTexture();
-      glowMaterial = new THREE.MeshBasicMaterial({
-
       });
       glowSphere = new THREE.Mesh(new THREE.SphereGeometry(8, 64, 64), glowMaterial);
       glowSphere.position.copy(sphere.position);
