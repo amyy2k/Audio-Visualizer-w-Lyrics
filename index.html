@@ -139,12 +139,12 @@
 
       scene.add(terrain);
 
-    // Main sphere (core light)
+// Core sphere (bright light center)
 const sphereGeometry = new THREE.SphereGeometry(6, 64, 64);
 const sphereMaterial = new THREE.MeshStandardMaterial({
-  color: 0x00ffff,
-  emissive: 0x00ffff,
-  emissiveIntensity: 2,
+  color: 0xffffff,
+  emissive: 0xffffff,
+  emissiveIntensity: 3,
   roughness: 0.2,
   metalness: 0.1
 });
@@ -152,29 +152,24 @@ sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
 sphere.position.set(0, 90, 0);
 scene.add(sphere);
 
-// Glow "shell"
-const glowMaterial = new THREE.MeshBasicMaterial({
+// Sprite-based glow (facing camera, soft bloom)
+const spriteMap = new THREE.TextureLoader().load('https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/sprites/glow.png');
+const spriteMaterial = new THREE.SpriteMaterial({
+  map: spriteMap,
   color: 0x00ffff,
   transparent: true,
-  opacity: 0.25,
-  side: THREE.BackSide,
-  blending: THREE.AdditiveBlending,
-  depthWrite: false
+  blending: THREE.AdditiveBlending
 });
-glowSphere = new THREE.Mesh(new THREE.SphereGeometry(9, 64, 64), glowMaterial);
-glowSphere.position.copy(sphere.position);
-scene.add(glowSphere);
+const sprite = new THREE.Sprite(spriteMaterial);
+sprite.scale.set(30, 30, 1); // Adjust size to match the glow you want
+sprite.position.copy(sphere.position);
+scene.add(sprite);
 
-// Point light to match
-pointLight = new THREE.PointLight(0x00ffff, 2.5, 250);
+// Point light for realistic illumination
+const pointLight = new THREE.PointLight(0x00ffff, 2.5, 200);
 pointLight.position.copy(sphere.position);
 scene.add(pointLight);
 
-      window.addEventListener('resize', () => {
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-      });
 
       animate();
     }
