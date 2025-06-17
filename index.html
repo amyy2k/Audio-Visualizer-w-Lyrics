@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8" />
   <title>Wireframe Audio Visualizer</title>
@@ -66,9 +65,7 @@
     }
   </style>
 </head>
-
 <body>
-
   <div id="controls">
     <button id="addTrackBtn">+</button>
     <select id="trackSelect">
@@ -110,6 +107,26 @@
     const terrainMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true });
     terrain = new THREE.Mesh(geometry, terrainMaterial);
 
+    function createFeatheredGlowTexture() {
+      const size = 256;
+      const canvas = document.createElement('canvas');
+      canvas.width = canvas.height = size;
+      const ctx = canvas.getContext('2d');
+
+      const gradient = ctx.createRadialGradient(
+        size / 2, size / 2, 10,
+        size / 2, size / 2, size / 2
+      );
+      gradient.addColorStop(0, 'rgba(255,255,255,0.5)');
+      gradient.addColorStop(0.6, 'rgba(255,255,255,0.1)');
+      gradient.addColorStop(1, 'rgba(255,255,255,0)');
+
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, size, size);
+
+      return new THREE.CanvasTexture(canvas);
+    }
+
     function init() {
       scene = new THREE.Scene();
       camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -122,8 +139,8 @@
 
       scene.add(terrain);
 
-      // Create glowing sphere
-      const sphereGeometry = new THREE.SphereGeometry(6, 64, 64);
+      // Glowing sphere
+      const sphereGeometry = new THREE.SphereGeometry(10, 64, 64);
       const sphereMaterial = new THREE.MeshStandardMaterial({
         color: 0xffffff,
         emissive: 0xffffff,
@@ -135,22 +152,19 @@
       sphere.position.set(0, 50, 0);
       scene.add(sphere);
 
-      // Add glow shell
-const glowTexture = createFeatheredGlowTexture();
-
-glowMaterial = new THREE.MeshBasicMaterial({
-  map: glowTexture,
-  transparent: true,
-  blending: THREE.AdditiveBlending,
-  side: THREE.BackSide,
-  depthWrite: false
-});
-
+      // Glow with feathered texture
+      const glowTexture = createFeatheredGlowTexture();
+      glowMaterial = new THREE.MeshBasicMaterial({
+        map: glowTexture,
+        transparent: true,
+        blending: THREE.AdditiveBlending,
+        side: THREE.BackSide,
+        depthWrite: false
+      });
       glowSphere = new THREE.Mesh(new THREE.SphereGeometry(12, 64, 64), glowMaterial);
       glowSphere.position.copy(sphere.position);
       scene.add(glowSphere);
 
-      // Add point light
       pointLight = new THREE.PointLight(0xffffff, 2, 200);
       pointLight.position.copy(sphere.position);
       scene.add(pointLight);
@@ -163,27 +177,6 @@ glowMaterial = new THREE.MeshBasicMaterial({
 
       animate();
     }
-
-    function createFeatheredGlowTexture() {
-  const size = 256;
-  const canvas = document.createElement('canvas');
-  canvas.width = canvas.height = size;
-  const ctx = canvas.getContext('2d');
-
-  const gradient = ctx.createRadialGradient(
-    size / 2, size / 2, 10,
-    size / 2, size / 2, size / 2
-  );
-  gradient.addColorStop(0, 'rgba(255, 255, 255, 0.6)');
-  gradient.addColorStop(0.7, 'rgba(255, 255, 255, 0.1)');
-  gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
-
-  ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, size, size);
-
-  return new THREE.CanvasTexture(canvas);
-}
-
 
     function loadTrack(filename) {
       audio.src = filename;
@@ -231,7 +224,6 @@ glowMaterial = new THREE.MeshBasicMaterial({
           seekBar.value = (audio.currentTime / audio.duration) * 100;
         }
 
-        // Bass visual scaling
         const bassAvg = dataArray.slice(0, 10).reduce((a, b) => a + b, 0) / 10;
         const scale = 1 + (bassAvg / 255) * 2;
         sphere.scale.set(scale, scale, scale);
@@ -251,7 +243,6 @@ glowMaterial = new THREE.MeshBasicMaterial({
     const fileInput = document.getElementById("fileInput");
 
     addTrackBtn.onclick = () => fileInput.click();
-
     fileInput.onchange = (event) => {
       const file = event.target.files[0];
       if (file) {
@@ -276,7 +267,6 @@ glowMaterial = new THREE.MeshBasicMaterial({
     };
 
     trackSelect.onchange = () => loadTrack(trackSelect.value);
-
     seekBar.addEventListener('input', () => seekBar.dragging = true);
     seekBar.addEventListener('change', () => {
       audio.currentTime = (seekBar.value / 100) * audio.duration;
@@ -286,5 +276,4 @@ glowMaterial = new THREE.MeshBasicMaterial({
     audio.onended = () => playPauseBtn.textContent = '▶';
   </script>
 </body>
-
 </html>
