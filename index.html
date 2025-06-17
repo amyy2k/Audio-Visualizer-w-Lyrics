@@ -140,7 +140,7 @@
       scene.add(terrain);
 
       // Glowing sphere
-      const sphereGeometry = new THREE.SphereGeometry(10, 64, 64);
+      const sphereGeometry = new THREE.SphereGeometry(7, 64, 64);
       const sphereMaterial = new THREE.MeshStandardMaterial({
         color: 0xffffff,
         emissive: 0xffffff,
@@ -149,7 +149,7 @@
         metalness: 0.1
       });
       sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
-      sphere.position.set(0, 70, 0);
+      sphere.position.set(0, 90, 0);
       scene.add(sphere);
 
       // Glow with feathered texture
@@ -160,7 +160,7 @@
         blending: THREE.AdditiveBlending,
         depthWrite: false
       });
-      glowSphere = new THREE.Mesh(new THREE.SphereGeometry(12, 64, 64), glowMaterial);
+      glowSphere = new THREE.Mesh(new THREE.SphereGeometry(8, 64, 64), glowMaterial);
       glowSphere.position.copy(sphere.position);
       scene.add(glowSphere);
 
