@@ -108,11 +108,11 @@
     const geometry = new THREE.PlaneGeometry(terrainWidth, terrainDepth, cols - 1, rows - 1);
     geometry.rotateX(-Math.PI / 2);
 
-    material = new THREE.MeshLambertMaterial({
+    const material = new THREE.MeshBasicMaterial({
       color: 0xffffff,
-      emissive: 0x000000,
       wireframe: true
     });
+
 
     terrain = new THREE.Mesh(geometry, material);
 
