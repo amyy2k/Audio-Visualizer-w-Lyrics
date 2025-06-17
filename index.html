@@ -2,9 +2,9 @@
 <html lang="en">
 
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Wireframe Audio Visualizer</title>
-  <link href="https://fonts.googleapis.com/css2?family=Quantico&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Quantico&display=swap" rel="stylesheet" />
   <style>
     body {
       margin: 0;
@@ -93,8 +93,8 @@
       <option value="Radiohead - All I Need.mp3">Radiohead - All I Need</option>
     </select>
     <button id="playPauseBtn">▶</button>
-    <input type="range" id="seekBar" value="0" min="0" max="100" step="0.1">
-    <input type="file" id="fileInput" accept="audio/*" style="display: none;">
+    <input type="range" id="seekBar" value="0" min="0" max="100" step="0.1" />
+    <input type="file" id="fileInput" accept="audio/*" style="display: none;" />
   </div>
 
   <audio id="audio"></audio>
@@ -133,26 +133,28 @@
       renderer = new THREE.WebGLRenderer({ antialias: true });
       renderer.setSize(window.innerWidth, window.innerHeight);
       document.body.appendChild(renderer.domElement);
-
       scene.add(terrain);
 
-      // Glowing Sphere
+      // Glowing Sphere Core
       const sphereGeometry = new THREE.SphereGeometry(10, 32, 32);
-      const sphereMaterial = new THREE.MeshBasicMaterial({ color: 0x00ffff });
+      const sphereMaterial = new THREE.MeshBasicMaterial({
+        color: 0xffcc33
+      });
       sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
-      sphere.position.set(0, 50, 0);
+      sphere.position.set(0, 60, 0);
       scene.add(sphere);
 
-      // Outer Ring Glow
-      const outerGeometry = new THREE.SphereGeometry(12, 32, 32);
-      const outerMaterial = new THREE.MeshBasicMaterial({
-        color: 0x00ffff,
+      // Outer Glow Ring
+      const glowGeometry = new THREE.SphereGeometry(12, 32, 32);
+      const glowMaterial = new THREE.MeshBasicMaterial({
+        color: 0xffcc33,
         transparent: true,
-        opacity: 0.15,
+        opacity: 0.35,
         blending: THREE.AdditiveBlending,
-        side: THREE.BackSide
+        side: THREE.BackSide,
+        depthWrite: false
       });
-      outerRing = new THREE.Mesh(outerGeometry, outerMaterial);
+      outerRing = new THREE.Mesh(glowGeometry, glowMaterial);
       outerRing.position.copy(sphere.position);
       scene.add(outerRing);
 
@@ -237,7 +239,7 @@
           seekBar.value = (audio.currentTime / audio.duration) * 100;
         }
 
-        // Bass-driven sphere pulse
+        // Bass average for glow effect
         let bassSum = 0;
         let bassCount = 10;
         for (let i = 0; i < bassCount; i++) {
@@ -247,10 +249,8 @@
         const scale = 1 + (bassAvg / 255) * 2;
 
         sphere.scale.set(scale, scale, scale);
-        outerRing.scale.set(scale * 1.3, scale * 1.3, scale * 1.3);
-
-        const time = performance.now() * 0.001;
-        outerRing.material.opacity = 0.1 + 0.05 * Math.sin(time * 2);
+        outerRing.scale.set(scale * 1.5, scale * 1.5, scale * 1.5);
+        outerRing.material.opacity = 0.3 + 0.1 * Math.sin(performance.now() * 0.005);
       }
 
       renderer.render(scene, camera);
