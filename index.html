@@ -138,15 +138,33 @@
       scene.add(terrain);
 
       // Add glowing sphere
-      const sphereGeometry = new THREE.SphereGeometry(10, 32, 32);
-      const sphereMaterial = new THREE.MeshBasicMaterial({ color: 0x00ffff });
-      sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
-      sphere.position.set(0, 90, 0);
-      scene.add(sphere);
+// Glowing, raised sphere
+const sphereGeometry = new THREE.SphereGeometry(10, 32, 32);
+const sphereMaterial = new THREE.MeshStandardMaterial({
+  color: 0x00ffff,
+  emissive: 0x00ffff,
+  emissiveIntensity: 1.5,
+  metalness: 0.5,
+  roughness: 0.3,
+});
+sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+sphere.position.set(0, 80, 0);
+scene.add(sphere);
 
-      glow = new THREE.PointLight(0x00ffff, 2, 150);
-      glow.position.copy(sphere.position);
-      scene.add(glow);
+// Bright glow light attached to sphere
+glow = new THREE.PointLight(0x00ffff, 3.5, 200);
+glow.position.set(0, 80, 0);
+scene.add(glow);
+
+// Optional: subtle ambient lighting
+const ambient = new THREE.AmbientLight(0xffffff, 0.3);
+scene.add(ambient);
+
+// Optional: enhance glow with renderer settings
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.physicallyCorrectLights = true;
+
 
       window.addEventListener('resize', () => {
         camera.aspect = window.innerWidth / window.innerHeight;
