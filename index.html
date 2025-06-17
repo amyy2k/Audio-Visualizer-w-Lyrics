@@ -142,10 +142,11 @@
       // Glowing sphere
       const sphereGeometry = new THREE.SphereGeometry(7, 64, 64);
       const sphereMaterial = new THREE.MeshStandardMaterial({
-        map: glowTexture,
+        color: 0x00ffff,
         transparent: true,
+        opacity: 0.15,
         blending: THREE.AdditiveBlending,
-        depthWrite: false
+        side: THREE.BackSide
       });
       sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
       sphere.position.set(0, 90, 0);
