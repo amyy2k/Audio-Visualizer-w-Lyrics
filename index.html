@@ -64,38 +64,38 @@
       border-radius: 50%;
       border: none;
     }
+
     #addTrackBtn {
-  background: transparent;
-  color: white;
-  border: none;
-  font-size: 22px;
-  padding: 4px 12px;
-  cursor: pointer;
-  font-family: 'Quantico', sans-serif;
-  transition: background 0.2s ease;
-}
+      background: transparent;
+      color: white;
+      border: none;
+      font-size: 22px;
+      padding: 4px 12px;
+      cursor: pointer;
+      font-family: 'Quantico', sans-serif;
+      transition: background 0.2s ease;
+    }
 
-#addTrackBtn:hover {
-  background: rgba(255, 255, 255, 0.2);
-}
-
+    #addTrackBtn:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
   </style>
 </head>
 
 <body>
-<div id="controls">
-  <button id="addTrackBtn">+</button>
-  <select id="trackSelect">
-    <option value="Cynthoni - Dork After Dark.mp3">Cynthoni - Dork After Dark</option>
-    <option value="Cynthoni - Lychee Ice.mp3">Cynthoni - Lychee Ice</option>
-    <option value="Joji - Die For You.mp3">Joji - Die For You</option>
-    <option value="Porter Robinson - Sad Machine.mp3">Porter Robinson - Sad Machine</option>
-    <option value="Radiohead - All I Need.mp3">Radiohead - All I Need</option>
-  </select>
-  <button id="playPauseBtn">▶</button>
-  <input type="range" id="seekBar" value="0" min="0" max="100" step="0.1">
-  <input type="file" id="fileInput" accept="audio/*" style="display: none;">
-</div>
+  <div id="controls">
+    <button id="addTrackBtn">+</button>
+    <select id="trackSelect">
+      <option value="Cynthoni - Dork After Dark.mp3">Cynthoni - Dork After Dark</option>
+      <option value="Cynthoni - Lychee Ice.mp3">Cynthoni - Lychee Ice</option>
+      <option value="Joji - Die For You.mp3">Joji - Die For You</option>
+      <option value="Porter Robinson - Sad Machine.mp3">Porter Robinson - Sad Machine</option>
+      <option value="Radiohead - All I Need.mp3">Radiohead - All I Need</option>
+    </select>
+    <button id="playPauseBtn">▶</button>
+    <input type="range" id="seekBar" value="0" min="0" max="100" step="0.1">
+    <input type="file" id="fileInput" accept="audio/*" style="display: none;">
+  </div>
 
   <audio id="audio"></audio>
 
@@ -120,154 +120,16 @@
     const geometry = new THREE.PlaneGeometry(terrainWidth, terrainDepth, cols - 1, rows - 1);
     geometry.rotateX(-Math.PI / 2);
 
-const glow = new THREE.PointLight(0x00ffff, 2, 150);
-glow.position.copy(sphere.position);
-scene.add(glow);
+    const material = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true });
     terrain = new THREE.Mesh(geometry, material);
 
+    // Create sphere and glow
+    const sphereGeometry = new THREE.SphereGeometry(10, 32, 32);
+    const sphereMaterial = new THREE.MeshBasicMaterial({ color: 0x00ffff });
+    const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+    sphere.position.set(0, 30, 0);
+
+    const glow = new THREE.PointLight(0x00ffff, 2, 150);
+    glow.position.copy(sphere.position);
+
     init();
-
-    function init() {
-      scene = new THREE.Scene();
-      camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-      camera.position.set(0, 10, 100);
-      camera.lookAt(0, 50, 0);
-
-      renderer = new THREE.WebGLRenderer({ antialias: true });
-      renderer.setSize(window.innerWidth, window.innerHeight);
-      document.body.appendChild(renderer.domElement);
-      scene.add(terrain);
-      // Glowing sphere
-const sphereGeometry = new THREE.SphereGeometry(10, 32, 32);
-const sphereMaterial = new THREE.MeshBasicMaterial({
-  color: 0x00ffff,
-});
-const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
-sphere.position.set(0, 30, 0);
-scene.add(sphere);
-
-      window.addEventListener('resize', () => {
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-      });
-
-      animate();
-    }
-
-    trackSelect.onchange = () => loadTrack(trackSelect.value);
-
-    playPauseBtn.onclick = () => {
-      if (audio.paused) {
-        audio.play();
-        playPauseBtn.textContent = '⏸';
-      } else {
-        audio.pause();
-        playPauseBtn.textContent = '▶';
-      }
-    };
-
-    audio.onended = () => {
-      playPauseBtn.textContent = '▶';
-    };
-
-    seekBar.addEventListener('input', () => {
-      seekBar.dragging = true;
-    });
-
-    seekBar.addEventListener('change', () => {
-      audio.currentTime = (seekBar.value / 100) * audio.duration;
-      seekBar.dragging = false;
-    });
-
-    function loadTrack(filename) {
-      audio.src = filename;
-      audio.load();
-      audio.play();
-      playPauseBtn.textContent = '⏸';
-
-      const audioCtx = new AudioContext();
-      const source = audioCtx.createMediaElementSource(audio);
-      analyser = audioCtx.createAnalyser();
-      analyser.fftSize = 256;
-      dataArray = new Uint8Array(analyser.frequencyBinCount);
-
-      source.connect(analyser);
-      analyser.connect(audioCtx.destination);
-    }
-
-    function animate() {
-      requestAnimationFrame(animate);
-
-      if (analyser && dataArray) {
-        analyser.getByteFrequencyData(dataArray);
-        const pos = terrain.geometry.attributes.position;
-        const halfCols = Math.floor(cols / 2);
-
-        for (let z = rows - 1; z > 0; z--) {
-          for (let x = 0; x < cols; x++) {
-            const i = z * cols + x;
-            const prev = (z - 1) * cols + x;
-            pos.array[i * 3 + 1] = pos.array[prev * 3 + 1];
-          }
-        }
-
-        for (let x = 0; x < cols; x++) {
-          const i = x;
-          const mirrorIndex = x < halfCols ? x : cols - x - 1;
-          const bin = Math.floor((mirrorIndex / halfCols) * dataArray.length);
-          const clampedBin = Math.min(bin, dataArray.length - 1);
-          const magnitude = dataArray[clampedBin] / 255;
-          pos.array[i * 3 + 1] = magnitude * 60;
-        }
-
-        pos.needsUpdate = true;
-
-        if (!seekBar.dragging && audio.duration) {
-          seekBar.value = (audio.currentTime / audio.duration) * 100;
-        }
-      }
-
-      // Get average of lower frequencies (bass)
-let bassSum = 0;
-let bassCount = 10; // number of bins to use from the low end
-for (let i = 0; i < bassCount; i++) {
-  bassSum += dataArray[i];
-}
-const bassAvg = bassSum / bassCount;
-
-// Scale the sphere based on bass
-const scale = 1 + (bassAvg / 255) * 2; // ranges from 1 to 3
-sphere.scale.set(scale, scale, scale);
-
-
-      renderer.render(scene, camera);
-    }
-
-    window.onload = () => {
-      loadTrack(trackSelect.value);
-    };
-
-    // 🎵 Upload logic: add new song
-    const addTrackBtn = document.getElementById("addTrackBtn");
-    const fileInput = document.getElementById("fileInput");
-
-    addTrackBtn.onclick = () => fileInput.click();
-
-    fileInput.onchange = (event) => {
-      const file = event.target.files[0];
-      if (file) {
-        const url = URL.createObjectURL(file);
-        const option = document.createElement("option");
-        option.textContent = file.name;
-        option.value = url;
-        trackSelect.appendChild(option);
-        trackSelect.value = url;
-        loadTrack(url);
-      }
-    };
-
-  </script>
-</body>
-
-</html>
