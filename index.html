@@ -142,11 +142,10 @@
       // Glowing sphere
       const sphereGeometry = new THREE.SphereGeometry(7, 64, 64);
       const sphereMaterial = new THREE.MeshStandardMaterial({
-        color: 0xffffff,
-        emissive: 0xffffff,
-        emissiveIntensity: 1.5,
-        roughness: 0.3,
-        metalness: 0.1
+        map: glowTexture,
+        transparent: true,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
       });
       sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
       sphere.position.set(0, 90, 0);
@@ -166,6 +165,7 @@
 
       pointLight = new THREE.PointLight(0xffffff, 2, 200);
       pointLight.position.copy(sphere.position);
+      scene.add(pointLight);
 
       window.addEventListener('resize', () => {
         camera.aspect = window.innerWidth / window.innerHeight;
