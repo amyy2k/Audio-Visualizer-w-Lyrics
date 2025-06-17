@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <title>Wireframe Audio Visualizer</title>
@@ -63,6 +64,18 @@
       border-radius: 50%;
       border: none;
     }
+
+    #lyrics {
+      position: fixed;
+      top: 20%;
+      width: 100%;
+      text-align: center;
+      font-size: 24px;
+      transform: translateY(-50%);
+      pointer-events: none;
+      z-index: 5;
+      opacity: 0.8;
+    }
   </style>
 </head>
 
@@ -79,6 +92,7 @@
     <input type="range" id="seekBar" value="0" min="0" max="100" step="0.1">
   </div>
 
+  <div id="lyrics"></div>
   <audio id="audio"></audio>
 
   <script type="importmap">
@@ -97,6 +111,13 @@
     const playPauseBtn = document.getElementById("playPauseBtn");
     const trackSelect = document.getElementById("trackSelect");
     const seekBar = document.getElementById("seekBar");
+    const lyricsDiv = document.getElementById("lyrics");
+
+    const lyricsMap = {
+      "Joji - Die For You.mp3": "Sometimes, sometimes...",
+      "Porter Robinson - Sad Machine.mp3": "Is anyone there?",
+      "Radiohead - All I Need.mp3": "I'm the next act, waiting in the wings"
+    };
 
     const cols = 64, rows = 64, terrainWidth = 300, terrainDepth = 800;
     const geometry = new THREE.PlaneGeometry(terrainWidth, terrainDepth, cols - 1, rows - 1);
@@ -157,6 +178,7 @@
       audio.load();
       audio.play();
       playPauseBtn.textContent = '⏸';
+      lyricsDiv.textContent = lyricsMap[filename] || '';
 
       const audioCtx = new AudioContext();
       const source = audioCtx.createMediaElementSource(audio);
@@ -208,4 +230,5 @@
     };
   </script>
 </body>
+
 </html>
