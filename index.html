@@ -223,7 +223,7 @@ scene.add(pointLight);
         const bassAvg = dataArray.slice(0, 10).reduce((a, b) => a + b, 0) / 10;
         const scale = 1 + (bassAvg / 255) * 2;
         sphere.scale.set(scale, scale, scale);
-        glowSphere.scale.set(scale * 1.2, scale * 1.2, scale * 1.2);
+        sprite.scale.set(30 * scale, 30 * scale, 1);
         pointLight.intensity = 1.5 + (bassAvg / 255) * 0.5;
       }
 
