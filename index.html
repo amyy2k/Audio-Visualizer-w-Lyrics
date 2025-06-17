@@ -94,7 +94,7 @@
     import * as THREE from 'three';
 
     let scene, camera, renderer, terrain, analyser, dataArray;
-    let sphere, glowSphere, glowMaterial, pointLight;
+    let sphere, glowSphere, glowMaterial;
 
     const audio = document.getElementById('audio');
     const playPauseBtn = document.getElementById("playPauseBtn");
@@ -163,10 +163,6 @@
       glowSphere = new THREE.Mesh(new THREE.SphereGeometry(12, 64, 64), glowMaterial);
       glowSphere.position.copy(sphere.position);
       scene.add(glowSphere);
-
-      pointLight = new THREE.PointLight(0xffffff, 2, 200);
-      pointLight.position.copy(sphere.position);
-      scene.add(pointLight);
 
       window.addEventListener('resize', () => {
         camera.aspect = window.innerWidth / window.innerHeight;
