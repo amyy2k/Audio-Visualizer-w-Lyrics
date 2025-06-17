@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <title>Wireframe Audio Visualizer</title>
@@ -109,7 +110,7 @@
   <script type="module">
     import * as THREE from 'three';
 
-    let scene, camera, renderer, terrain, analyser, dataArray, sphere, glow;
+    let scene, camera, renderer, terrain, analyser, dataArray, sphere, outerRing;
     const audio = document.getElementById('audio');
     const playPauseBtn = document.getElementById("playPauseBtn");
     const trackSelect = document.getElementById("trackSelect");
@@ -118,7 +119,6 @@
     const cols = 64, rows = 64, terrainWidth = 300, terrainDepth = 800;
     const geometry = new THREE.PlaneGeometry(terrainWidth, terrainDepth, cols - 1, rows - 1);
     geometry.rotateX(-Math.PI / 2);
-
     const material = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true });
     terrain = new THREE.Mesh(geometry, material);
 
@@ -134,37 +134,27 @@
       renderer.setSize(window.innerWidth, window.innerHeight);
       document.body.appendChild(renderer.domElement);
 
-      // Add terrain
       scene.add(terrain);
 
-      // Add glowing sphere
-// Glowing, raised sphere
-const sphereGeometry = new THREE.SphereGeometry(10, 32, 32);
-const sphereMaterial = new THREE.MeshStandardMaterial({
-  color: 0x00ffff,
-  emissive: 0x00ffff,
-  emissiveIntensity: 1.5,
-  metalness: 0.5,
-  roughness: 0.3,
-});
-sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
-sphere.position.set(0, 80, 0);
-scene.add(sphere);
+      // Glowing Sphere
+      const sphereGeometry = new THREE.SphereGeometry(10, 32, 32);
+      const sphereMaterial = new THREE.MeshBasicMaterial({ color: 0x00ffff });
+      sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+      sphere.position.set(0, 50, 0);
+      scene.add(sphere);
 
-// Bright glow light attached to sphere
-glow = new THREE.PointLight(0x00ffff, 3.5, 200);
-glow.position.set(0, 80, 0);
-scene.add(glow);
-
-// Optional: subtle ambient lighting
-const ambient = new THREE.AmbientLight(0xffffff, 0.3);
-scene.add(ambient);
-
-// Optional: enhance glow with renderer settings
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.outputEncoding = THREE.sRGBEncoding;
-renderer.physicallyCorrectLights = true;
-
+      // Outer Ring Glow
+      const outerGeometry = new THREE.SphereGeometry(12, 32, 32);
+      const outerMaterial = new THREE.MeshBasicMaterial({
+        color: 0x00ffff,
+        transparent: true,
+        opacity: 0.15,
+        blending: THREE.AdditiveBlending,
+        side: THREE.BackSide
+      });
+      outerRing = new THREE.Mesh(outerGeometry, outerMaterial);
+      outerRing.position.copy(sphere.position);
+      scene.add(outerRing);
 
       window.addEventListener('resize', () => {
         camera.aspect = window.innerWidth / window.innerHeight;
@@ -243,19 +233,24 @@ renderer.physicallyCorrectLights = true;
 
         pos.needsUpdate = true;
 
-        // Bass detection
+        if (!seekBar.dragging && audio.duration) {
+          seekBar.value = (audio.currentTime / audio.duration) * 100;
+        }
+
+        // Bass-driven sphere pulse
         let bassSum = 0;
-        const bassCount = 10;
+        let bassCount = 10;
         for (let i = 0; i < bassCount; i++) {
           bassSum += dataArray[i];
         }
         const bassAvg = bassSum / bassCount;
         const scale = 1 + (bassAvg / 255) * 2;
-        sphere.scale.set(scale, scale, scale);
 
-        if (!seekBar.dragging && audio.duration) {
-          seekBar.value = (audio.currentTime / audio.duration) * 100;
-        }
+        sphere.scale.set(scale, scale, scale);
+        outerRing.scale.set(scale * 1.3, scale * 1.3, scale * 1.3);
+
+        const time = performance.now() * 0.001;
+        outerRing.material.opacity = 0.1 + 0.05 * Math.sin(time * 2);
       }
 
       renderer.render(scene, camera);
@@ -284,4 +279,5 @@ renderer.physicallyCorrectLights = true;
     };
   </script>
 </body>
+
 </html>
