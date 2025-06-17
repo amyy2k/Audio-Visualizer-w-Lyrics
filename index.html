@@ -139,34 +139,6 @@
 
       scene.add(terrain);
 
-      // Glowing sphere
-      const sphereGeometry = new THREE.SphereGeometry(7, 64, 64);
-      const sphereMaterial = new THREE.MeshStandardMaterial({
-        color: 0x00ffff,
-        transparent: true,
-        opacity: 0.15,
-        blending: THREE.AdditiveBlending,
-        side: THREE.BackSide
-      });
-      sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
-      sphere.position.set(0, 90, 0);
-      scene.add(sphere);
-
-      // Glow with feathered texture
-      const glowTexture = createFeatheredGlowTexture();
-      glowMaterial = new THREE.MeshBasicMaterial({
-        map: glowTexture,
-        transparent: true,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false
-      });
-      glowSphere = new THREE.Mesh(new THREE.SphereGeometry(8, 64, 64), glowMaterial);
-      glowSphere.position.copy(sphere.position);
-      scene.add(glowSphere);
-
-      pointLight = new THREE.PointLight(0xffffff, 2, 200);
-      pointLight.position.copy(sphere.position);
-      scene.add(pointLight);
 
       window.addEventListener('resize', () => {
         camera.aspect = window.innerWidth / window.innerHeight;
