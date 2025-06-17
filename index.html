@@ -9,7 +9,7 @@
     body {
       margin: 0;
       overflow: hidden;
-      background: linear-gradient(to bottom, black 0%, white 100%);
+      background: black;
       font-family: 'Quantico', sans-serif;
 
       letter-spacing: 1px;
@@ -94,7 +94,6 @@
   </div>
 
   <div id="lyrics"></div>
-  <div id="flash"></div>
   <audio id="audio"></audio>
 
   <script type="importmap">
@@ -223,12 +222,7 @@
           seekBar.value = (audio.currentTime / audio.duration) * 100;
         }
       }
-    // Detect bass (lower end of frequency data)
-const bass = dataArray.slice(0, 10).reduce((a, b) => a + b, 0) / 10;
-const bassStrength = bass / 255;
 
-const flash = document.getElementById('flash');
-flash.style.opacity = bassStrength > 0.5 ? bassStrength * 0.3 : 0;
 
       renderer.render(scene, camera);
     }
