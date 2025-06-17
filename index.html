@@ -142,11 +142,11 @@
       // Glowing sphere
       const sphereGeometry = new THREE.SphereGeometry(7, 64, 64);
       const sphereMaterial = new THREE.MeshStandardMaterial({
-        color: 0x00ffff,
+        map: glowTexture,
         transparent: true,
-        opacity: 0.15,
         blending: THREE.AdditiveBlending,
-        side: THREE.BackSide
+        depthWrite: false
+
       });
       sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
       sphere.position.set(0, 90, 0);
@@ -155,10 +155,11 @@
       // Glow with feathered texture
       const glowTexture = createFeatheredGlowTexture();
       glowMaterial = new THREE.MeshBasicMaterial({
-        map: glowTexture,
+        color: 0x00ffff,
         transparent: true,
+        opacity: 0.15,
         blending: THREE.AdditiveBlending,
-        depthWrite: false
+        side: THREE.BackSide
       });
       glowSphere = new THREE.Mesh(new THREE.SphereGeometry(8, 64, 64), glowMaterial);
       glowSphere.position.copy(sphere.position);
