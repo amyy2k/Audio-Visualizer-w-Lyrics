@@ -68,17 +68,19 @@
 </head>
 
 <body>
-  <div id="controls">
-    <select id="trackSelect">
-      <option value="Cynthoni - Dork After Dark.mp3">Cynthoni - Dork After Dark</option>
-      <option value="Cynthoni - Lychee Ice.mp3">Cynthoni - Lychee Ice</option>
-      <option value="Joji - Die For You.mp3">Joji - Die For You</option>
-      <option value="Porter Robinson - Sad Machine.mp3">Porter Robinson - Sad Machine</option>
-      <option value="Radiohead - All I Need.mp3">Radiohead - All I Need</option>
-    </select>
-    <button id="playPauseBtn">▶</button>
-    <input type="range" id="seekBar" value="0" min="0" max="100" step="0.1">
-  </div>
+<div id="controls">
+  <button id="addTrackBtn">+</button>
+  <select id="trackSelect">
+    <option value="Cynthoni - Dork After Dark.mp3">Cynthoni - Dork After Dark</option>
+    <option value="Cynthoni - Lychee Ice.mp3">Cynthoni - Lychee Ice</option>
+    <option value="Joji - Die For You.mp3">Joji - Die For You</option>
+    <option value="Porter Robinson - Sad Machine.mp3">Porter Robinson - Sad Machine</option>
+    <option value="Radiohead - All I Need.mp3">Radiohead - All I Need</option>
+  </select>
+  <button id="playPauseBtn">▶</button>
+  <input type="range" id="seekBar" value="0" min="0" max="100" step="0.1">
+  <input type="file" id="fileInput" accept="audio/*" style="display: none;">
+</div>
 
   <audio id="audio"></audio>
 
@@ -207,6 +209,26 @@
     window.onload = () => {
       loadTrack(trackSelect.value);
     };
+
+    // 🎵 Upload logic: add new song
+    const addTrackBtn = document.getElementById("addTrackBtn");
+    const fileInput = document.getElementById("fileInput");
+
+    addTrackBtn.onclick = () => fileInput.click();
+
+    fileInput.onchange = (event) => {
+      const file = event.target.files[0];
+      if (file) {
+        const url = URL.createObjectURL(file);
+        const option = document.createElement("option");
+        option.textContent = file.name;
+        option.value = url;
+        trackSelect.appendChild(option);
+        trackSelect.value = url;
+        loadTrack(url);
+      }
+    };
+
   </script>
 </body>
 
