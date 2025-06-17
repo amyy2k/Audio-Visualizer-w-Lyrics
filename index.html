@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>Wireframe Audio Visualizer</title>
-  <link href="https://fonts.googleapis.com/css2?family=Quantico&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Quantico&display=swap" rel="stylesheet">
   <style>
     body {
       margin: 0;
@@ -66,7 +67,7 @@
 
     #lyrics {
       position: fixed;
-      top: 20%;
+      top: 50%;
       width: 100%;
       text-align: center;
       font-size: 24px;
@@ -112,9 +113,6 @@
     const seekBar = document.getElementById("seekBar");
     const lyricsDiv = document.getElementById("lyrics");
 
-    const audioCtx = new AudioContext();
-    let source;
-
     const lyricsMap = {
       "Joji - Die For You.mp3": "Sometimes, sometimes...",
       "Porter Robinson - Sad Machine.mp3": "Is anyone there?",
@@ -150,8 +148,9 @@
       animate();
     }
 
+    trackSelect.onchange = () => loadTrack(trackSelect.value);
+
     playPauseBtn.onclick = () => {
-      audioCtx.resume(); // resume audio context on first user interaction
       if (audio.paused) {
         audio.play();
         playPauseBtn.textContent = '⏸';
@@ -161,15 +160,18 @@
       }
     };
 
-    trackSelect.onchange = () => loadTrack(trackSelect.value);
+    audio.onended = () => {
+      playPauseBtn.textContent = '▶';
+    };
 
-    seekBar.addEventListener('input', () => seekBar.dragging = true);
+    seekBar.addEventListener('input', () => {
+      seekBar.dragging = true;
+    });
+
     seekBar.addEventListener('change', () => {
       audio.currentTime = (seekBar.value / 100) * audio.duration;
       seekBar.dragging = false;
     });
-
-    audio.onended = () => playPauseBtn.textContent = '▶';
 
     function loadTrack(filename) {
       audio.src = filename;
@@ -178,8 +180,8 @@
       playPauseBtn.textContent = '⏸';
       lyricsDiv.textContent = lyricsMap[filename] || '';
 
-      if (source) source.disconnect();
-      source = audioCtx.createMediaElementSource(audio);
+      const audioCtx = new AudioContext();
+      const source = audioCtx.createMediaElementSource(audio);
       analyser = audioCtx.createAnalyser();
       analyser.fftSize = 256;
       dataArray = new Uint8Array(analyser.frequencyBinCount);
@@ -223,7 +225,10 @@
       renderer.render(scene, camera);
     }
 
-    window.onload = () => loadTrack(trackSelect.value);
+    window.onload = () => {
+      loadTrack(trackSelect.value);
+    };
   </script>
 </body>
+
 </html>
