@@ -100,7 +100,7 @@
 <body>
   <div id="instructions">
     <h3>Audio Visualizer</h3>
-    <p>Click "Start" to begin, then select an example track or upload your own audio file</p>
+    <p>Click "Start" to begin, then select a track or upload your own audio file</p>
     <button id="startBtn" style="background: black; color: white; border: 1px solid white; padding: 10px 20px; cursor: pointer;">Start</button>
   </div>
 
@@ -108,20 +108,20 @@
     <button id="addTrackBtn">+</button>
     <select id="trackSelect">
       <option value="">Select a track...</option>
-      <option value="https://raw.githubusercontent.com/amyy2k/Audio-Visualizer-w-Lyrics/main/Cynthoni - Dork After Dark.mp3">Cynthoni - Dork After Dark</option>
-      <option value="https://raw.githubusercontent.com/amyy2k/Audio-Visualizer-w-Lyrics/main/Cynthoni - Lychee Ice.mp3">Cynthoni - Lychee Ice</option>
-      <option value="https://raw.githubusercontent.com/amyy2k/Audio-Visualizer-w-Lyrics/main/Joji - Die For You.mp3">Joji - Die For You</option>
-      <option value="https://raw.githubusercontent.com/amyy2k/Audio-Visualizer-w-Lyrics/main/Porter Robinson - Sad Machine.mp3">Porter Robinson - Sad Machine</option>
-      <option value="https://raw.githubusercontent.com/amyy2k/Audio-Visualizer-w-Lyrics/main/Radiohead - All I Need.mp3">Radiohead - All I Need</option>
+      <option value="./Cynthoni - Dork After Dark.mp3">Cynthoni - Dork After Dark</option>
+      <option value="./Cynthoni - Lychee Ice.mp3">Cynthoni - Lychee Ice</option>
+      <option value="./Joji - Die For You.mp3">Joji - Die For You</option>
+      <option value="./Porter Robinson - Sad Machine.mp3">Porter Robinson - Sad Machine</option>
+      <option value="./Radiohead - All I Need.mp3">Radiohead - All I Need</option>
     </select>
     <button id="playPauseBtn" disabled>▶</button>
     <input type="range" id="seekBar" value="0" min="0" max="100" step="0.1" disabled>
     <input type="file" id="fileInput" accept="audio/*" style="display: none;">
   </div>
 
-  <div id="status">Ready - Select an example track or upload your own audio file</div>
+  <div id="status">Ready - Select a track or upload your own audio file</div>
 
-  <audio id="audio" crossorigin="anonymous"></audio>
+  <audio id="audio" preload="metadata"></audio>
 
   <script type="importmap">
     {
@@ -223,7 +223,7 @@
 
       animate();
       isInitialized = true;
-      status.textContent = "3D scene initialized - Select an example track or upload your own";
+      status.textContent = "3D scene initialized - Select a track or upload your own";
     }
 
     function initAudio() {
@@ -234,7 +234,7 @@
         audioSource = null;
         analyser = null;
         
-        status.textContent = "Audio context ready - Select an example track or upload your own";
+        status.textContent = "Audio context ready - Select a track or upload your own";
         return true;
       } catch (error) {
         status.textContent = "Error initializing audio: " + error.message;
@@ -249,6 +249,7 @@
         // Only create the source once, reuse if it already exists
         if (!audioSource) {
           audioSource = audioContext.createMediaElementSource(audio);
+          console.log('Created new MediaElementSource');
         }
         
         // Create new analyser for each track
@@ -264,6 +265,7 @@
         audioSource.connect(analyser);
         analyser.connect(audioContext.destination);
         
+        console.log('Audio analyser setup complete');
         return true;
       } catch (error) {
         status.textContent = "Error setting up audio analyser: " + error.message;
@@ -305,7 +307,7 @@
         }
       }, { once: true });
 
-      // Error handler with CORS-specific messaging
+      // Error handler
       audio.addEventListener('error', (e) => {
         let errorMsg = "Error loading audio file";
         if (audio.error) {
@@ -314,17 +316,13 @@
               errorMsg = "Audio loading aborted";
               break;
             case 2:
-              errorMsg = source.includes('github') ? 
-                "Network error - GitHub file may not be accessible" : 
-                "Network error loading audio";
+              errorMsg = "Network error loading audio file";
               break;
             case 3:
               errorMsg = "Audio format not supported or corrupted";
               break;
             case 4:
-              errorMsg = source.includes('github') ? 
-                "GitHub audio file not found or not public" : 
-                "Audio source not available";
+              errorMsg = "Audio file not found";
               break;
             default:
               errorMsg = "Unknown audio error (code: " + audio.error.code + ")";
@@ -336,7 +334,7 @@
           src: audio.src,
           readyState: audio.readyState,
           networkState: audio.networkState,
-          fileSource: source.startsWith('blob:') ? 'uploaded file' : 'external URL'
+          fileSource: source.startsWith('blob:') ? 'uploaded file' : 'local file'
         });
         
         // Reset UI
@@ -344,9 +342,9 @@
         seekBar.disabled = true;
       }, { once: true });
 
-      // Add additional debugging
+      // Add basic debugging
       audio.addEventListener('loadstart', () => {
-        console.log('Audio load started for:', source);
+        console.log('Loading audio file');
         status.textContent = "Loading audio...";
       }, { once: true });
 
@@ -358,52 +356,85 @@
     function animate() {
       requestAnimationFrame(animate);
 
+      let hasFrequencyData = false;
+      
       if (analyser && dataArray) {
         analyser.getByteFrequencyData(dataArray);
-        const pos = terrain.geometry.attributes.position;
-        const halfCols = Math.floor(cols / 2);
+        
+        // Check if we actually have frequency data
+        hasFrequencyData = dataArray.some(val => val > 0);
+        
+        if (hasFrequencyData) {
+          const pos = terrain.geometry.attributes.position;
+          const halfCols = Math.floor(cols / 2);
 
-        // Shift terrain data back
-        for (let z = rows - 1; z > 0; z--) {
-          for (let x = 0; x < cols; x++) {
-            const i = z * cols + x;
-            const prev = (z - 1) * cols + x;
-            pos.array[i * 3 + 1] = pos.array[prev * 3 + 1];
+          // Shift terrain data back
+          for (let z = rows - 1; z > 0; z--) {
+            for (let x = 0; x < cols; x++) {
+              const i = z * cols + x;
+              const prev = (z - 1) * cols + x;
+              pos.array[i * 3 + 1] = pos.array[prev * 3 + 1];
+            }
           }
+
+          // Add new frequency data to front row
+          for (let x = 0; x < cols; x++) {
+            const i = x;
+            const mirrorIndex = x < halfCols ? x : cols - x - 1;
+            const bin = Math.floor((mirrorIndex / halfCols) * dataArray.length);
+            const magnitude = dataArray[Math.min(bin, dataArray.length - 1)] / 255;
+            pos.array[i * 3 + 1] = magnitude * 60;
+          }
+
+          pos.needsUpdate = true;
+
+          // Update sphere and glow based on bass
+          const bassAvg = dataArray.slice(0, 10).reduce((a, b) => a + b, 0) / 10;
+          const scale = 1 + (bassAvg / 255) * 2.5;
+          
+          // Scale the core sphere
+          sphere.scale.set(scale, scale, scale);
+          
+          // Scale both glow layers
+          sprite.scale.set(60 * scale, 60 * scale, 1);
+          innerGlow.scale.set(25 * scale, 25 * scale, 1);
+          
+          // Increase light intensity and make it pulse
+          pointLight.intensity = 2 + (bassAvg / 255) * 3;
+          
+          // Add subtle sphere material emissive pulsing
+          sphere.material.emissiveIntensity = 4 + (bassAvg / 255) * 2;
         }
-
-        // Add new frequency data to front row
-        for (let x = 0; x < cols; x++) {
-          const i = x;
-          const mirrorIndex = x < halfCols ? x : cols - x - 1;
-          const bin = Math.floor((mirrorIndex / halfCols) * dataArray.length);
-          const magnitude = dataArray[Math.min(bin, dataArray.length - 1)] / 255;
-          pos.array[i * 3 + 1] = magnitude * 60;
-        }
-
-        pos.needsUpdate = true;
-
-        // Update seek bar (only for audio element, not demo)
-        if (!seekBar.dragging && audio.duration && !audio.paused) {
-          seekBar.value = (audio.currentTime / audio.duration) * 100;
-        }
-
-        // Update sphere and glow based on bass
-        const bassAvg = dataArray.slice(0, 10).reduce((a, b) => a + b, 0) / 10;
-        const scale = 1 + (bassAvg / 255) * 2.5;
+      }
+      
+      // Fallback animation when no frequency data (no audio playing or issue with analyser)
+      if (!hasFrequencyData && !audio.paused && audio.currentTime > 0) {
+        const time = Date.now() * 0.003;
+        const pulse = Math.sin(time * 2) * 0.5 + 0.5;
         
-        // Scale the core sphere
+        // Gentle pulsing animation
+        const scale = 1 + pulse * 0.3;
         sphere.scale.set(scale, scale, scale);
-        
-        // Scale both glow layers
         sprite.scale.set(60 * scale, 60 * scale, 1);
         innerGlow.scale.set(25 * scale, 25 * scale, 1);
+        pointLight.intensity = 2 + pulse * 1.5;
+        sphere.material.emissiveIntensity = 4 + pulse * 1.5;
         
-        // Increase light intensity and make it pulse
-        pointLight.intensity = 2 + (bassAvg / 255) * 3;
-        
-        // Add subtle sphere material emissive pulsing
-        sphere.material.emissiveIntensity = 4 + (bassAvg / 255) * 2;
+        // Simple wave animation for terrain
+        const pos = terrain.geometry.attributes.position;
+        for (let x = 0; x < cols; x++) {
+          for (let z = 0; z < rows; z++) {
+            const i = z * cols + x;
+            const wave = Math.sin((x * 0.1) + (z * 0.1) + time) * 10 + 5;
+            pos.array[i * 3 + 1] = Math.max(0, wave);
+          }
+        }
+        pos.needsUpdate = true;
+      }
+
+      // Update seek bar (only for audio element, not demo)
+      if (!seekBar.dragging && audio.duration && !audio.paused) {
+        seekBar.value = (audio.currentTime / audio.duration) * 100;
       }
 
       renderer.render(scene, camera);
