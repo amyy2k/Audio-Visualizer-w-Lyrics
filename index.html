@@ -133,9 +133,9 @@
 
   <script type="module">
     import * as THREE from 'three';
-
+    
     let scene, camera, renderer, terrain, analyser, dataArray;
-    let sphere, sprite, pointLight;
+    let sphere, sprite, innerGlow, pointLight;
     let audioContext, audioSource;
     let isInitialized = false;
 
@@ -150,19 +150,22 @@
     const cols = 64, rows = 64, terrainWidth = 300, terrainDepth = 800;
 
     function createGlowTexture() {
-      const size = 256;
+      const size = 512;
       const canvas = document.createElement('canvas');
       canvas.width = canvas.height = size;
       const ctx = canvas.getContext('2d');
 
+      // Create multiple glow layers for more intensity
       const gradient = ctx.createRadialGradient(
-        size / 2, size / 2, 10,
+        size / 2, size / 2, 0,
         size / 2, size / 2, size / 2
       );
       gradient.addColorStop(0, 'rgba(255,255,255,1)');
-      gradient.addColorStop(0.3, 'rgba(0,255,255,0.8)');
-      gradient.addColorStop(0.6, 'rgba(0,255,255,0.3)');
-      gradient.addColorStop(1, 'rgba(0,255,255,0)');
+      gradient.addColorStop(0.1, 'rgba(255,255,255,0.9)');
+      gradient.addColorStop(0.3, 'rgba(255,255,255,0.6)');
+      gradient.addColorStop(0.6, 'rgba(255,255,255,0.3)');
+      gradient.addColorStop(0.8, 'rgba(255,255,255,0.1)');
+      gradient.addColorStop(1, 'rgba(255,255,255,0)');
 
       ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, size, size);
@@ -226,6 +229,11 @@
     function initAudio() {
       try {
         audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        
+        // Reset any existing connections
+        audioSource = null;
+        analyser = null;
+        
         status.textContent = "Audio context ready - Select an example track or upload your own";
         return true;
       } catch (error) {
@@ -238,21 +246,28 @@
       if (!audioContext) return false;
 
       try {
-        if (audioSource) {
-          audioSource.disconnect();
+        // Only create the source once, reuse if it already exists
+        if (!audioSource) {
+          audioSource = audioContext.createMediaElementSource(audio);
         }
-
-        audioSource = audioContext.createMediaElementSource(audio);
+        
+        // Create new analyser for each track
+        if (analyser) {
+          analyser.disconnect();
+        }
+        
         analyser = audioContext.createAnalyser();
         analyser.fftSize = 256;
         dataArray = new Uint8Array(analyser.frequencyBinCount);
 
+        // Connect: audioSource -> analyser -> destination
         audioSource.connect(analyser);
         analyser.connect(audioContext.destination);
-
+        
         return true;
       } catch (error) {
         status.textContent = "Error setting up audio analyser: " + error.message;
+        console.error('Audio analyser error:', error);
         return false;
       }
     }
@@ -266,14 +281,14 @@
       // Reset audio element
       audio.pause();
       audio.currentTime = 0;
-
+      
       // Add loading indicator
       status.textContent = "Loading audio file...";
-
+      
       // Set source and load
       audio.src = source;
       audio.load();
-
+      
       // Success handler
       audio.addEventListener('loadeddata', () => {
         console.log('Audio loaded successfully:', {
@@ -281,7 +296,8 @@
           src: audio.src,
           readyState: audio.readyState
         });
-
+        
+        // Setup analyser on first successful load
         if (setupAudioAnalyser()) {
           status.textContent = "Track loaded - Ready to play";
           playPauseBtn.disabled = false;
@@ -289,7 +305,7 @@
         }
       }, { once: true });
 
-      // Error handler
+      // Error handler with CORS-specific messaging
       audio.addEventListener('error', (e) => {
         let errorMsg = "Error loading audio file";
         if (audio.error) {
@@ -298,13 +314,17 @@
               errorMsg = "Audio loading aborted";
               break;
             case 2:
-              errorMsg = "Network error loading audio";
+              errorMsg = source.includes('github') ? 
+                "Network error - GitHub file may not be accessible" : 
+                "Network error loading audio";
               break;
             case 3:
               errorMsg = "Audio format not supported or corrupted";
               break;
             case 4:
-              errorMsg = "Audio source not available";
+              errorMsg = source.includes('github') ? 
+                "GitHub audio file not found or not public" : 
+                "Audio source not available";
               break;
             default:
               errorMsg = "Unknown audio error (code: " + audio.error.code + ")";
@@ -316,9 +336,9 @@
           src: audio.src,
           readyState: audio.readyState,
           networkState: audio.networkState,
-          fileSize: source.startsWith('blob:') ? 'blob URL' : 'unknown'
+          fileSource: source.startsWith('blob:') ? 'uploaded file' : 'external URL'
         });
-
+        
         // Reset UI
         playPauseBtn.disabled = true;
         seekBar.disabled = true;
@@ -326,7 +346,7 @@
 
       // Add additional debugging
       audio.addEventListener('loadstart', () => {
-        console.log('Audio load started');
+        console.log('Audio load started for:', source);
         status.textContent = "Loading audio...";
       }, { once: true });
 
@@ -370,10 +390,20 @@
 
         // Update sphere and glow based on bass
         const bassAvg = dataArray.slice(0, 10).reduce((a, b) => a + b, 0) / 10;
-        const scale = 1 + (bassAvg / 255) * 2;
+        const scale = 1 + (bassAvg / 255) * 2.5;
+        
+        // Scale the core sphere
         sphere.scale.set(scale, scale, scale);
-        sprite.scale.set(30 * scale, 30 * scale, 1);
-        pointLight.intensity = 1.5 + (bassAvg / 255) * 0.5;
+        
+        // Scale both glow layers
+        sprite.scale.set(60 * scale, 60 * scale, 1);
+        innerGlow.scale.set(25 * scale, 25 * scale, 1);
+        
+        // Increase light intensity and make it pulse
+        pointLight.intensity = 2 + (bassAvg / 255) * 3;
+        
+        // Add subtle sphere material emissive pulsing
+        sphere.material.emissiveIntensity = 4 + (bassAvg / 255) * 2;
       }
 
       renderer.render(scene, camera);
@@ -405,28 +435,28 @@
           status.textContent = "Please select a valid audio file";
           return;
         }
-
+        
         // Check file size (limit to 50MB)
         if (file.size > 50 * 1024 * 1024) {
           status.textContent = "File too large (max 50MB)";
           return;
         }
-
+        
         console.log('Selected file:', {
           name: file.name,
           type: file.type,
           size: file.size
         });
-
+        
         const url = URL.createObjectURL(file);
-
+        
         // Add new file to existing options (don't clear the example tracks)
         const option = document.createElement("option");
         option.textContent = file.name + " (uploaded)";
         option.value = url;
         trackSelect.appendChild(option);
         trackSelect.value = url;
-
+        
         loadTrack(url);
       }
     };
