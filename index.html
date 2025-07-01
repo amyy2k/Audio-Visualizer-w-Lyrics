@@ -22,6 +22,7 @@
       display: flex;
       gap: 10px;
       align-items: center;
+      flex-wrap: wrap;
     }
 
     #addTrackBtn,
@@ -32,6 +33,12 @@
       padding: 6px 12px;
       font-size: 16px;
       cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    #addTrackBtn:hover,
+    #playPauseBtn:hover {
+      background: #333;
     }
 
     #addTrackBtn {
@@ -63,29 +70,63 @@
       border-radius: 50%;
       border: none;
     }
+
+    #status {
+      position: fixed;
+      bottom: 10px;
+      left: 10px;
+      font-size: 12px;
+      opacity: 0.7;
+    }
+
+    #instructions {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      z-index: 100;
+      background: rgba(0,0,0,0.8);
+      padding: 20px;
+      border: 1px solid white;
+      display: block;
+    }
+
+    #instructions.hidden {
+      display: none;
+    }
   </style>
 </head>
 <body>
+  <div id="instructions">
+    <h3>Audio Visualizer</h3>
+    <p>Click "Start" to begin, then select an example track or upload your own audio file</p>
+    <button id="startBtn" style="background: black; color: white; border: 1px solid white; padding: 10px 20px; cursor: pointer;">Start</button>
+  </div>
+
   <div id="controls">
     <button id="addTrackBtn">+</button>
     <select id="trackSelect">
-      <option value="Cynthoni - Dork After Dark.mp3">Cynthoni - Dork After Dark</option>
-      <option value="Cynthoni - Lychee Ice.mp3">Cynthoni - Lychee Ice</option>
-      <option value="Joji - Die For You.mp3">Joji - Die For You</option>
-      <option value="Porter Robinson - Sad Machine.mp3">Porter Robinson - Sad Machine</option>
-      <option value="Radiohead - All I Need.mp3">Radiohead - All I Need</option>
+      <option value="">Select a track...</option>
+      <option value="https://raw.githubusercontent.com/amyy2k/Audio-Visualizer-w-Lyrics/main/Cynthoni - Dork After Dark.mp3">Cynthoni - Dork After Dark</option>
+      <option value="https://raw.githubusercontent.com/amyy2k/Audio-Visualizer-w-Lyrics/main/Cynthoni - Lychee Ice.mp3">Cynthoni - Lychee Ice</option>
+      <option value="https://raw.githubusercontent.com/amyy2k/Audio-Visualizer-w-Lyrics/main/Joji - Die For You.mp3">Joji - Die For You</option>
+      <option value="https://raw.githubusercontent.com/amyy2k/Audio-Visualizer-w-Lyrics/main/Porter Robinson - Sad Machine.mp3">Porter Robinson - Sad Machine</option>
+      <option value="https://raw.githubusercontent.com/amyy2k/Audio-Visualizer-w-Lyrics/main/Radiohead - All I Need.mp3">Radiohead - All I Need</option>
     </select>
-    <button id="playPauseBtn">▶</button>
-    <input type="range" id="seekBar" value="0" min="0" max="100" step="0.1">
+    <button id="playPauseBtn" disabled>▶</button>
+    <input type="range" id="seekBar" value="0" min="0" max="100" step="0.1" disabled>
     <input type="file" id="fileInput" accept="audio/*" style="display: none;">
   </div>
 
-  <audio id="audio"></audio>
+  <div id="status">Ready - Select an example track or upload your own audio file</div>
+
+  <audio id="audio" crossorigin="anonymous"></audio>
 
   <script type="importmap">
     {
       "imports": {
-        "three": "https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.module.js"
+        "three": "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.module.js"
       }
     }
   </script>
@@ -94,32 +135,36 @@
     import * as THREE from 'three';
     
     let scene, camera, renderer, terrain, analyser, dataArray;
-    let sphere, sprite, pointLight;
-
+    let sphere, sprite, innerGlow, pointLight;
+    let audioContext, audioSource;
+    let isInitialized = false;
 
     const audio = document.getElementById('audio');
     const playPauseBtn = document.getElementById("playPauseBtn");
     const trackSelect = document.getElementById("trackSelect");
     const seekBar = document.getElementById("seekBar");
+    const status = document.getElementById("status");
+    const instructions = document.getElementById("instructions");
+    const startBtn = document.getElementById("startBtn");
 
     const cols = 64, rows = 64, terrainWidth = 300, terrainDepth = 800;
-    const geometry = new THREE.PlaneGeometry(terrainWidth, terrainDepth, cols - 1, rows - 1);
-    geometry.rotateX(-Math.PI / 2);
-    const terrainMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true });
-    terrain = new THREE.Mesh(geometry, terrainMaterial);
 
-    function createFeatheredGlowTexture() {
-      const size = 256;
+    function createGlowTexture() {
+      const size = 512;
       const canvas = document.createElement('canvas');
       canvas.width = canvas.height = size;
       const ctx = canvas.getContext('2d');
 
+      // Create multiple glow layers for more intensity
       const gradient = ctx.createRadialGradient(
-        size / 2, size / 2, 10,
+        size / 2, size / 2, 0,
         size / 2, size / 2, size / 2
       );
-      gradient.addColorStop(0, 'rgba(255,255,255,0.5)');
-      gradient.addColorStop(0.6, 'rgba(255,255,255,0.1)');
+      gradient.addColorStop(0, 'rgba(255,255,255,1)');
+      gradient.addColorStop(0.1, 'rgba(255,255,255,0.9)');
+      gradient.addColorStop(0.3, 'rgba(255,255,255,0.6)');
+      gradient.addColorStop(0.6, 'rgba(255,255,255,0.3)');
+      gradient.addColorStop(0.8, 'rgba(255,255,255,0.1)');
       gradient.addColorStop(1, 'rgba(255,255,255,0)');
 
       ctx.fillStyle = gradient;
@@ -138,57 +183,176 @@
       renderer.setSize(window.innerWidth, window.innerHeight);
       document.body.appendChild(renderer.domElement);
 
+      // Create terrain
+      const geometry = new THREE.PlaneGeometry(terrainWidth, terrainDepth, cols - 1, rows - 1);
+      geometry.rotateX(-Math.PI / 2);
+      const terrainMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true });
+      terrain = new THREE.Mesh(geometry, terrainMaterial);
       scene.add(terrain);
 
-// Core sphere (bright light center)
-const sphereGeometry = new THREE.SphereGeometry(6, 64, 64);
-const sphereMaterial = new THREE.MeshStandardMaterial({
-  color: 0xffffff,
-  emissive: 0xffffff,
-  emissiveIntensity: 3,
-  roughness: 0.2,
-  metalness: 0.1
-});
-sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
-sphere.position.set(0, 90, 0);
-scene.add(sphere);
+      // Core sphere
+      const sphereGeometry = new THREE.SphereGeometry(6, 64, 64);
+      const sphereMaterial = new THREE.MeshStandardMaterial({
+        color: 0xffffff,
+        emissive: 0xffffff,
+        emissiveIntensity: 3,
+        roughness: 0.2,
+        metalness: 0.1
+      });
+      sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+      sphere.position.set(0, 90, 0);
+      scene.add(sphere);
 
-// Sprite-based glow (facing camera, soft bloom)
-const spriteMap = new THREE.TextureLoader().load('https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/sprites/glow.png');
-const spriteMaterial = new THREE.SpriteMaterial({
-  map: spriteMap,
-  color: 0x00ffff,
-  transparent: true,
-  blending: THREE.AdditiveBlending
-});
-const sprite = new THREE.Sprite(spriteMaterial);
-sprite.scale.set(30, 30, 1); // Adjust size to match the glow you want
-sprite.position.copy(sphere.position);
-scene.add(sprite);
+      // Sprite-based glow
+      const spriteMap = createGlowTexture();
+      const spriteMaterial = new THREE.SpriteMaterial({
+        map: spriteMap,
+        color: 0x00ffff,
+        transparent: true,
+        blending: THREE.AdditiveBlending
+      });
+      sprite = new THREE.Sprite(spriteMaterial);
+      sprite.scale.set(30, 30, 1);
+      sprite.position.copy(sphere.position);
+      scene.add(sprite);
 
-// Point light for realistic illumination
-const pointLight = new THREE.PointLight(0x00ffff, 2.5, 200);
-pointLight.position.copy(sphere.position);
-scene.add(pointLight);
-
+      // Point light
+      pointLight = new THREE.PointLight(0x00ffff, 2.5, 200);
+      pointLight.position.copy(sphere.position);
+      scene.add(pointLight);
 
       animate();
+      isInitialized = true;
+      status.textContent = "3D scene initialized - Select an example track or upload your own";
     }
 
-    function loadTrack(filename) {
-      audio.src = filename;
+    function initAudio() {
+      try {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        
+        // Reset any existing connections
+        audioSource = null;
+        analyser = null;
+        
+        status.textContent = "Audio context ready - Select an example track or upload your own";
+        return true;
+      } catch (error) {
+        status.textContent = "Error initializing audio: " + error.message;
+        return false;
+      }
+    }
+
+    function setupAudioAnalyser() {
+      if (!audioContext) return false;
+
+      try {
+        // Only create the source once, reuse if it already exists
+        if (!audioSource) {
+          audioSource = audioContext.createMediaElementSource(audio);
+        }
+        
+        // Create new analyser for each track
+        if (analyser) {
+          analyser.disconnect();
+        }
+        
+        analyser = audioContext.createAnalyser();
+        analyser.fftSize = 256;
+        dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+        // Connect: audioSource -> analyser -> destination
+        audioSource.connect(analyser);
+        analyser.connect(audioContext.destination);
+        
+        return true;
+      } catch (error) {
+        status.textContent = "Error setting up audio analyser: " + error.message;
+        console.error('Audio analyser error:', error);
+        return false;
+      }
+    }
+
+    function loadTrack(source) {
+      if (!audioContext) {
+        status.textContent = "Audio context not initialized";
+        return;
+      }
+
+      // Reset audio element
+      audio.pause();
+      audio.currentTime = 0;
+      
+      // Add loading indicator
+      status.textContent = "Loading audio file...";
+      
+      // Set source and load
+      audio.src = source;
       audio.load();
-      audio.play();
-      playPauseBtn.textContent = '⏸';
+      
+      // Success handler
+      audio.addEventListener('loadeddata', () => {
+        console.log('Audio loaded successfully:', {
+          duration: audio.duration,
+          src: audio.src,
+          readyState: audio.readyState
+        });
+        
+        // Setup analyser on first successful load
+        if (setupAudioAnalyser()) {
+          status.textContent = "Track loaded - Ready to play";
+          playPauseBtn.disabled = false;
+          seekBar.disabled = false;
+        }
+      }, { once: true });
 
-      const audioCtx = new AudioContext();
-      const source = audioCtx.createMediaElementSource(audio);
-      analyser = audioCtx.createAnalyser();
-      analyser.fftSize = 256;
-      dataArray = new Uint8Array(analyser.frequencyBinCount);
+      // Error handler with CORS-specific messaging
+      audio.addEventListener('error', (e) => {
+        let errorMsg = "Error loading audio file";
+        if (audio.error) {
+          switch(audio.error.code) {
+            case 1:
+              errorMsg = "Audio loading aborted";
+              break;
+            case 2:
+              errorMsg = source.includes('github') ? 
+                "Network error - GitHub file may not be accessible" : 
+                "Network error loading audio";
+              break;
+            case 3:
+              errorMsg = "Audio format not supported or corrupted";
+              break;
+            case 4:
+              errorMsg = source.includes('github') ? 
+                "GitHub audio file not found or not public" : 
+                "Audio source not available";
+              break;
+            default:
+              errorMsg = "Unknown audio error (code: " + audio.error.code + ")";
+          }
+        }
+        status.textContent = errorMsg;
+        console.error('Audio error details:', {
+          error: audio.error,
+          src: audio.src,
+          readyState: audio.readyState,
+          networkState: audio.networkState,
+          fileSource: source.startsWith('blob:') ? 'uploaded file' : 'external URL'
+        });
+        
+        // Reset UI
+        playPauseBtn.disabled = true;
+        seekBar.disabled = true;
+      }, { once: true });
 
-      source.connect(analyser);
-      analyser.connect(audioCtx.destination);
+      // Add additional debugging
+      audio.addEventListener('loadstart', () => {
+        console.log('Audio load started for:', source);
+        status.textContent = "Loading audio...";
+      }, { once: true });
+
+      audio.addEventListener('canplay', () => {
+        console.log('Audio can start playing');
+      }, { once: true });
     }
 
     function animate() {
@@ -199,6 +363,7 @@ scene.add(pointLight);
         const pos = terrain.geometry.attributes.position;
         const halfCols = Math.floor(cols / 2);
 
+        // Shift terrain data back
         for (let z = rows - 1; z > 0; z--) {
           for (let x = 0; x < cols; x++) {
             const i = z * cols + x;
@@ -207,6 +372,7 @@ scene.add(pointLight);
           }
         }
 
+        // Add new frequency data to front row
         for (let x = 0; x < cols; x++) {
           const i = x;
           const mirrorIndex = x < halfCols ? x : cols - x - 1;
@@ -217,60 +383,135 @@ scene.add(pointLight);
 
         pos.needsUpdate = true;
 
-        if (!seekBar.dragging && audio.duration) {
+        // Update seek bar (only for audio element, not demo)
+        if (!seekBar.dragging && audio.duration && !audio.paused) {
           seekBar.value = (audio.currentTime / audio.duration) * 100;
         }
 
+        // Update sphere and glow based on bass
         const bassAvg = dataArray.slice(0, 10).reduce((a, b) => a + b, 0) / 10;
-        const scale = 1 + (bassAvg / 255) * 2;
+        const scale = 1 + (bassAvg / 255) * 2.5;
+        
+        // Scale the core sphere
         sphere.scale.set(scale, scale, scale);
-        sprite.scale.set(30 * scale, 30 * scale, 1);
-        pointLight.intensity = 1.5 + (bassAvg / 255) * 0.5;
+        
+        // Scale both glow layers
+        sprite.scale.set(60 * scale, 60 * scale, 1);
+        innerGlow.scale.set(25 * scale, 25 * scale, 1);
+        
+        // Increase light intensity and make it pulse
+        pointLight.intensity = 2 + (bassAvg / 255) * 3;
+        
+        // Add subtle sphere material emissive pulsing
+        sphere.material.emissiveIntensity = 4 + (bassAvg / 255) * 2;
       }
 
       renderer.render(scene, camera);
     }
 
-    window.onload = () => {
+    // Event listeners
+    startBtn.onclick = () => {
+      instructions.classList.add('hidden');
       init();
-      loadTrack(trackSelect.value);
+      initAudio();
     };
 
     const addTrackBtn = document.getElementById("addTrackBtn");
     const fileInput = document.getElementById("fileInput");
 
-    addTrackBtn.onclick = () => fileInput.click();
+    addTrackBtn.onclick = () => {
+      if (!isInitialized) {
+        status.textContent = "Please click Start first";
+        return;
+      }
+      fileInput.click();
+    };
+
     fileInput.onchange = (event) => {
       const file = event.target.files[0];
       if (file) {
+        // Validate file type
+        if (!file.type.startsWith('audio/')) {
+          status.textContent = "Please select a valid audio file";
+          return;
+        }
+        
+        // Check file size (limit to 50MB)
+        if (file.size > 50 * 1024 * 1024) {
+          status.textContent = "File too large (max 50MB)";
+          return;
+        }
+        
+        console.log('Selected file:', {
+          name: file.name,
+          type: file.type,
+          size: file.size
+        });
+        
         const url = URL.createObjectURL(file);
+        
+        // Add new file to existing options (don't clear the example tracks)
         const option = document.createElement("option");
-        option.textContent = file.name;
+        option.textContent = file.name + " (uploaded)";
         option.value = url;
         trackSelect.appendChild(option);
         trackSelect.value = url;
+        
         loadTrack(url);
       }
     };
 
-    playPauseBtn.onclick = () => {
+    playPauseBtn.onclick = async () => {
+      if (!audioContext) return;
+
+      if (audioContext.state === 'suspended') {
+        await audioContext.resume();
+      }
+
       if (audio.paused) {
-        audio.play();
-        playPauseBtn.textContent = '⏸';
+        audio.play().then(() => {
+          playPauseBtn.textContent = '⏸';
+          status.textContent = "Playing - " + (trackSelect.selectedOptions[0]?.text || "Audio");
+        }).catch(error => {
+          status.textContent = "Error playing audio: " + error.message;
+        });
       } else {
         audio.pause();
         playPauseBtn.textContent = '▶';
+        status.textContent = "Paused";
       }
     };
 
-    trackSelect.onchange = () => loadTrack(trackSelect.value);
-    seekBar.addEventListener('input', () => seekBar.dragging = true);
+    trackSelect.onchange = () => {
+      if (trackSelect.value) {
+        loadTrack(trackSelect.value);
+      }
+    };
+
+    seekBar.addEventListener('input', () => {
+      seekBar.dragging = true;
+    });
+
     seekBar.addEventListener('change', () => {
-      audio.currentTime = (seekBar.value / 100) * audio.duration;
+      if (audio.duration) {
+        audio.currentTime = (seekBar.value / 100) * audio.duration;
+      }
       seekBar.dragging = false;
     });
 
-    audio.onended = () => playPauseBtn.textContent = '▶';
+    audio.onended = () => {
+      playPauseBtn.textContent = '▶';
+      status.textContent = "Track ended";
+    };
+
+    // Handle window resize
+    window.addEventListener('resize', () => {
+      if (camera && renderer) {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      }
+    });
   </script>
 </body>
 </html>
