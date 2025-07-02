@@ -92,7 +92,7 @@
 
   <script type="module">
     import * as THREE from 'three';
-    
+
     let scene, camera, renderer, terrain, analyser, dataArray;
     let sphere, sprite, pointLight;
 
@@ -161,13 +161,13 @@ const spriteMaterial = new THREE.SpriteMaterial({
   transparent: true,
   blending: THREE.AdditiveBlending
 });
-sprite = new THREE.Sprite(spriteMaterial);  // use the global 'sprite'
+const sprite = new THREE.Sprite(spriteMaterial);
 sprite.scale.set(30, 30, 1); // Adjust size to match the glow you want
 sprite.position.copy(sphere.position);
 scene.add(sprite);
 
 // Point light for realistic illumination
-pointLight = new THREE.PointLight(0x00ffff, 2.5, 200); // use the global 'pointLight'
+const pointLight = new THREE.PointLight(0x00ffff, 2.5, 200);
 pointLight.position.copy(sphere.position);
 scene.add(pointLight);
 
