@@ -115,6 +115,7 @@
         let isPlaying = false;
         let currentTrack = null;
         let currentTheme = 'blackwhite';
+        let terrainDecay = 0; // For smooth pause transitions
 
         // Theme definitions
         const themes = {
@@ -224,22 +225,28 @@
         }
 
         function createSun() {
-            // Core sun sphere - smaller size
+            // Core sun sphere - glowing material
             const sphereGeometry = new THREE.SphereGeometry(6, 64, 64);
             const sphereMaterial = new THREE.MeshBasicMaterial({
-                color: themes[currentTheme].sun
+                color: themes[currentTheme].sun,
+                transparent: true,
+                opacity: 0.9
             });
             sun = new THREE.Mesh(sphereGeometry, sphereMaterial);
             sun.position.set(0, 90, 0);
             scene.add(sun);
 
-            // Glow layers
-            for (let i = 1; i <= 4; i++) {
-                const glowGeometry = new THREE.SphereGeometry(6 + (i * 8), 32, 32);
+            // Create multiple glow layers for realistic orb effect
+            const glowSizes = [12, 18, 25, 35, 50]; // Different glow layer sizes
+            const glowOpacities = [0.4, 0.25, 0.15, 0.08, 0.04]; // Decreasing opacity
+            
+            for (let i = 0; i < glowSizes.length; i++) {
+                const glowGeometry = new THREE.SphereGeometry(glowSizes[i], 32, 32);
                 const glowMaterial = new THREE.MeshBasicMaterial({
-                    color: themes[currentTheme].sunGlow[i - 1],
+                    color: themes[currentTheme].sunGlow[Math.min(i, themes[currentTheme].sunGlow.length - 1)],
                     transparent: true,
-                    opacity: 0.15 / i
+                    opacity: glowOpacities[i],
+                    blending: THREE.AdditiveBlending
                 });
                 
                 const glow = new THREE.Mesh(glowGeometry, glowMaterial);
@@ -250,8 +257,36 @@
                 sun.glows.push(glow);
             }
 
-            // Point light
-            const light = new THREE.PointLight(themes[currentTheme].light, 2.5, 200);
+            // Add sprite-based outer glow for extra ethereal effect
+            const canvas = document.createElement('canvas');
+            canvas.width = canvas.height = 128;
+            const ctx = canvas.getContext('2d');
+            
+            const gradient = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
+            gradient.addColorStop(0, 'rgba(255,255,255,1)');
+            gradient.addColorStop(0.3, 'rgba(255,255,255,0.6)');
+            gradient.addColorStop(0.7, 'rgba(255,255,255,0.2)');
+            gradient.addColorStop(1, 'rgba(255,255,255,0)');
+            
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, 128, 128);
+            
+            const glowTexture = new THREE.CanvasTexture(canvas);
+            const spriteMaterial = new THREE.SpriteMaterial({
+                map: glowTexture,
+                transparent: true,
+                blending: THREE.AdditiveBlending,
+                opacity: 0.6
+            });
+            
+            const sprite = new THREE.Sprite(spriteMaterial);
+            sprite.scale.set(80, 80, 1);
+            sprite.position.copy(sun.position);
+            scene.add(sprite);
+            sun.sprite = sprite;
+
+            // Point light with larger radius
+            const light = new THREE.PointLight(themes[currentTheme].light, 3, 300);
             light.position.copy(sun.position);
             scene.add(light);
             sun.light = light;
@@ -274,8 +309,15 @@
                 
                 if (sun.glows) {
                     sun.glows.forEach((glow, index) => {
-                        glow.material.color.setHex(themes[currentTheme].sunGlow[index]);
+                        const colorIndex = Math.min(index, themes[currentTheme].sunGlow.length - 1);
+                        glow.material.color.setHex(themes[currentTheme].sunGlow[colorIndex]);
                     });
+                }
+                
+                if (sun.sprite) {
+                    // Sprite color is controlled by the texture, but we can adjust opacity based on theme
+                    const themeColor = new THREE.Color(themes[currentTheme].sun);
+                    sun.sprite.material.color.copy(themeColor);
                 }
                 
                 if (sun.light) {
@@ -354,6 +396,8 @@
                     audio.pause();
                     playPauseBtn.textContent = '▶';
                     isPlaying = false;
+                    // Start smooth decay transition when pausing
+                    terrainDecay = 1.0;
                 }
             } catch (error) {
                 console.error('Playback error:', error);
@@ -369,9 +413,13 @@
                 const hasData = dataArray.some(value => value > 0);
                 if (hasData) {
                     updateVisualization();
+                    terrainDecay = 1.0; // Reset decay when music is playing
                 }
+            } else if (terrainDecay > 0) {
+                // Smooth transition when paused - gradually reduce terrain heights
+                smoothDecay();
             } else {
-                // Keep terrain flat when not playing
+                // Fully stopped - ensure terrain is flat
                 const positions = terrain.geometry.attributes.position;
                 for (let i = 0; i < positions.count; i++) {
                     positions.setY(i, 0);
@@ -385,6 +433,51 @@
             }
 
             renderer.render(scene, camera);
+        }
+
+        function smoothDecay() {
+            // Gradually reduce terrain heights for smooth stop transition
+            const positions = terrain.geometry.attributes.position;
+            
+            for (let i = 0; i < positions.count; i++) {
+                const currentHeight = positions.getY(i);
+                const newHeight = currentHeight * terrainDecay;
+                positions.setY(i, newHeight);
+            }
+            
+            positions.needsUpdate = true;
+            
+            // Reduce decay factor (makes transition slower for smoother effect)
+            terrainDecay *= 0.92;
+            
+            // Stop decay when heights are very small
+            if (terrainDecay < 0.01) {
+                terrainDecay = 0;
+            }
+            
+            // Also smoothly reduce sun scale during decay
+            if (sun) {
+                const currentScale = sun.scale.x;
+                const targetScale = 1.0;
+                const newScale = currentScale + (targetScale - currentScale) * 0.1;
+                sun.scale.set(newScale, newScale, newScale);
+                
+                // Reduce glow opacity during decay
+                if (sun.glows) {
+                    sun.glows.forEach((glow, index) => {
+                        const baseOpacity = [0.4, 0.25, 0.15, 0.08, 0.04][index] || 0.04;
+                        glow.material.opacity = baseOpacity * terrainDecay;
+                    });
+                }
+                
+                if (sun.sprite) {
+                    sun.sprite.material.opacity = 0.6 * terrainDecay;
+                }
+                
+                if (sun.light) {
+                    sun.light.intensity = 3 * terrainDecay + 1; // Keep some base light
+                }
+            }
         }
 
         function updateVisualization() {
@@ -411,27 +504,38 @@
 
             pos.needsUpdate = true;
 
-            // Bass-reactive sun
+            // Bass-reactive glowing orb
             const bassData = dataArray.slice(0, 5);
             const bassAverage = bassData.reduce((a, b) => a + b, 0) / bassData.length;
             const bassIntensity = bassAverage / 255;
             
-            // Sun scaling - reduced maximum size
-            const scale = 1 + (bassIntensity * 0.8);
+            // Sun scaling - reduced maximum size but more responsive
+            const scale = 1 + (bassIntensity * 0.6);
             sun.scale.set(scale, scale, scale);
             
-            // Update glow layers
+            // Update glow layers with more dramatic effects
             if (sun.glows) {
+                const baseOpacities = [0.4, 0.25, 0.15, 0.08, 0.04];
                 sun.glows.forEach((glow, index) => {
-                    const glowScale = scale + (index * 0.15);
+                    const glowScale = scale + (index * 0.1);
                     glow.scale.set(glowScale, glowScale, glowScale);
-                    glow.material.opacity = (0.15 / (index + 1)) * (1 + bassIntensity * 2);
+                    
+                    // More dramatic opacity changes based on bass
+                    const baseOpacity = baseOpacities[index] || 0.04;
+                    glow.material.opacity = baseOpacity * (1 + bassIntensity * 3);
                 });
             }
             
-            // Update light intensity
+            // Update sprite glow
+            if (sun.sprite) {
+                const spriteScale = scale * 1.2;
+                sun.sprite.scale.set(80 * spriteScale, 80 * spriteScale, 1);
+                sun.sprite.material.opacity = 0.6 * (1 + bassIntensity * 0.8);
+            }
+            
+            // Update light intensity with stronger bass reaction
             if (sun.light) {
-                sun.light.intensity = 2.5 + (bassIntensity * 3);
+                sun.light.intensity = 3 + (bassIntensity * 5);
             }
         }
 
@@ -479,6 +583,8 @@
         audio.addEventListener('ended', () => {
             playPauseBtn.textContent = '▶';
             isPlaying = false;
+            // Start smooth decay transition when track ends
+            terrainDecay = 1.0;
         });
 
         // Handle window resize
