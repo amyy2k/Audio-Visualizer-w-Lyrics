@@ -1,548 +1,559 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Wireframe Audio Visualizer</title>
-  <link href="https://fonts.googleapis.com/css2?family=Quantico&display=swap" rel="stylesheet">
-  <style>
-    body {
-      margin: 0;
-      overflow: hidden;
-      background: black;
-      font-family: 'Quantico', sans-serif;
-      color: white;
-      letter-spacing: 1px;
-    }
-
-    #controls {
-      position: fixed;
-      top: 10px;
-      left: 10px;
-      z-index: 10;
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-
-    #addTrackBtn,
-    #playPauseBtn {
-      background: black;
-      color: white;
-      border: 1px solid white;
-      padding: 6px 12px;
-      font-size: 16px;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-
-    #addTrackBtn:hover,
-    #playPauseBtn:hover {
-      background: #333;
-    }
-
-    #addTrackBtn {
-      font-size: 22px;
-      padding: 4px 12px;
-    }
-
-    #trackSelect {
-      background: black;
-      color: white;
-      border: 1px solid white;
-      padding: 6px 8px;
-      font-family: 'Quantico', sans-serif;
-    }
-
-    #seekBar {
-      width: 200px;
-      height: 6px;
-      appearance: none;
-      background: white;
-      cursor: pointer;
-    }
-
-    #seekBar::-webkit-slider-thumb,
-    #seekBar::-moz-range-thumb {
-      height: 14px;
-      width: 14px;
-      background: white;
-      border-radius: 50%;
-      border: none;
-    }
-
-    #status {
-      position: fixed;
-      bottom: 10px;
-      left: 10px;
-      font-size: 12px;
-      opacity: 0.7;
-    }
-
-    #instructions {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      text-align: center;
-      z-index: 100;
-      background: rgba(0,0,0,0.8);
-      padding: 20px;
-      border: 1px solid white;
-      display: block;
-    }
-
-    #instructions.hidden {
-      display: none;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wireframe Audio Visualizer</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            background: linear-gradient(to bottom, #ff6b35, #ffa726);
+            color: #fff;
+            font-family: 'Courier New', monospace;
+            overflow: hidden;
+        }
+        
+        #ui {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 100;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            background: rgba(255, 107, 53, 0.2);
+            padding: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+        }
+        
+        select, button, input[type="range"] {
+            background: rgba(0, 0, 0, 0.3);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            padding: 8px 12px;
+            font-family: inherit;
+            border-radius: 5px;
+        }
+        
+        button:hover, select:hover {
+            background: rgba(255, 140, 66, 0.4);
+            border-color: #fff;
+        }
+        
+        #playBtn {
+            min-width: 60px;
+        }
+        
+        #volume {
+            width: 100px;
+        }
+        
+        #fileInput {
+            display: none;
+        }
+        
+        #status {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(255, 107, 53, 0.2);
+            padding: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+        }
+        
+        canvas {
+            display: block;
+        }
+    </style>
 </head>
 <body>
-  <div id="instructions">
-    <h3>Audio Visualizer</h3>
-    <p>Click "Start" to begin, then select a track or upload your own audio file</p>
-    <button id="startBtn" style="background: black; color: white; border: 1px solid white; padding: 10px 20px; cursor: pointer;">Start</button>
-  </div>
-
-  <div id="controls">
-    <button id="addTrackBtn">+</button>
-    <select id="trackSelect">
-      <option value="">Select a track...</option>
-      <option value="./Cynthoni - Dork After Dark.mp3">Cynthoni - Dork After Dark</option>
-      <option value="./Cynthoni - Lychee Ice.mp3">Cynthoni - Lychee Ice</option>
-      <option value="./Joji - Die For You.mp3">Joji - Die For You</option>
-      <option value="./Porter Robinson - Sad Machine.mp3">Porter Robinson - Sad Machine</option>
-      <option value="./Radiohead - All I Need.mp3">Radiohead - All I Need</option>
-    </select>
-    <button id="playPauseBtn" disabled>▶</button>
-    <input type="range" id="seekBar" value="0" min="0" max="100" step="0.1" disabled>
-    <input type="file" id="fileInput" accept="audio/*" style="display: none;">
-  </div>
-
-  <div id="status">Ready - Select a track or upload your own audio file</div>
-
-  <audio id="audio" preload="metadata"></audio>
-
-  <script type="importmap">
-    {
-      "imports": {
-        "three": "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.module.js"
-      }
-    }
-  </script>
-
-  <script type="module">
-    import * as THREE from 'three';
+    <div id="ui">
+        <select id="trackSelect">
+            <option value="">Choose a track...</option>
+            <option value="./Cynthoni - Dork After Dark.mp3">Cynthoni - Dork After Dark</option>
+            <option value="./Cynthoni - Lychee Ice.mp3">Cynthoni - Lychee Ice</option>
+            <option value="./Joji - Die For You.mp3">Joji - Die For You</option>
+            <option value="./Porter Robinson - Sad Machine.mp3">Porter Robinson - Sad Machine</option>
+            <option value="./Radiohead - All I Need.mp3">Radiohead - All I Need</option>
+        </select>
+        
+        <button id="uploadBtn">Upload File</button>
+        <input type="file" id="fileInput" accept="audio/*">
+        
+        <button id="playBtn">▶ Play</button>
+        
+        <label>Volume:</label>
+        <input type="range" id="volume" min="0" max="100" value="50">
+    </div>
     
-    let scene, camera, renderer, terrain, analyser, dataArray;
-    let sphere, sprite, innerGlow, pointLight;
-    let audioContext, audioSource;
-    let isInitialized = false;
+    <div id="status">Welcome to the beach - Click a track to begin</div>
+    
+    <audio id="audio"></audio>
 
-    const audio = document.getElementById('audio');
-    const playPauseBtn = document.getElementById("playPauseBtn");
-    const trackSelect = document.getElementById("trackSelect");
-    const seekBar = document.getElementById("seekBar");
-    const status = document.getElementById("status");
-    const instructions = document.getElementById("instructions");
-    const startBtn = document.getElementById("startBtn");
-
-    const cols = 64, rows = 64, terrainWidth = 300, terrainDepth = 800;
-
-    function createGlowTexture() {
-      const size = 512;
-      const canvas = document.createElement('canvas');
-      canvas.width = canvas.height = size;
-      const ctx = canvas.getContext('2d');
-
-      // Create multiple glow layers for more intensity
-      const gradient = ctx.createRadialGradient(
-        size / 2, size / 2, 0,
-        size / 2, size / 2, size / 2
-      );
-      gradient.addColorStop(0, 'rgba(255,255,255,1)');
-      gradient.addColorStop(0.1, 'rgba(255,255,255,0.9)');
-      gradient.addColorStop(0.3, 'rgba(255,255,255,0.6)');
-      gradient.addColorStop(0.6, 'rgba(255,255,255,0.3)');
-      gradient.addColorStop(0.8, 'rgba(255,255,255,0.1)');
-      gradient.addColorStop(1, 'rgba(255,255,255,0)');
-
-      ctx.fillStyle = gradient;
-      ctx.fillRect(0, 0, size, size);
-
-      return new THREE.CanvasTexture(canvas);
-    }
-
-    function init() {
-      scene = new THREE.Scene();
-      camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-      camera.position.set(0, 10, 100);
-      camera.lookAt(0, 50, 0);
-
-      renderer = new THREE.WebGLRenderer({ antialias: true });
-      renderer.setSize(window.innerWidth, window.innerHeight);
-      document.body.appendChild(renderer.domElement);
-
-      // Create terrain
-      const geometry = new THREE.PlaneGeometry(terrainWidth, terrainDepth, cols - 1, rows - 1);
-      geometry.rotateX(-Math.PI / 2);
-      const terrainMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true });
-      terrain = new THREE.Mesh(geometry, terrainMaterial);
-      scene.add(terrain);
-
-      // Core sphere
-      const sphereGeometry = new THREE.SphereGeometry(6, 64, 64);
-      const sphereMaterial = new THREE.MeshStandardMaterial({
-        color: 0xffffff,
-        emissive: 0xffffff,
-        emissiveIntensity: 3,
-        roughness: 0.2,
-        metalness: 0.1
-      });
-      sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
-      sphere.position.set(0, 90, 0);
-      scene.add(sphere);
-
-      // Sprite-based glow
-      const spriteMap = createGlowTexture();
-      const spriteMaterial = new THREE.SpriteMaterial({
-        map: spriteMap,
-        color: 0x00ffff,
-        transparent: true,
-        blending: THREE.AdditiveBlending
-      });
-      sprite = new THREE.Sprite(spriteMaterial);
-      sprite.scale.set(30, 30, 1);
-      sprite.position.copy(sphere.position);
-      scene.add(sprite);
-
-      // Point light
-      pointLight = new THREE.PointLight(0x00ffff, 2.5, 200);
-      pointLight.position.copy(sphere.position);
-      scene.add(pointLight);
-
-      animate();
-      isInitialized = true;
-      status.textContent = "3D scene initialized - Select a track or upload your own";
-    }
-
-    function initAudio() {
-      try {
-        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Global variables
+        let scene, camera, renderer, terrain, sun;
+        let audioContext, analyser, audioSource, dataArray;
+        let isPlaying = false;
+        let currentTrack = null;
         
-        // Reset any existing connections
-        audioSource = null;
-        analyser = null;
+        // UI elements
+        const audio = document.getElementById('audio');
+        const trackSelect = document.getElementById('trackSelect');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const fileInput = document.getElementById('fileInput');
+        const playBtn = document.getElementById('playBtn');
+        const volumeSlider = document.getElementById('volume');
+        const status = document.getElementById('status');
         
-        status.textContent = "Audio context ready - Select a track or upload your own";
-        return true;
-      } catch (error) {
-        status.textContent = "Error initializing audio: " + error.message;
-        return false;
-      }
-    }
-
-    function setupAudioAnalyser() {
-      if (!audioContext) return false;
-
-      try {
-        // Only create the source once, reuse if it already exists
-        if (!audioSource) {
-          audioSource = audioContext.createMediaElementSource(audio);
-          console.log('Created new MediaElementSource');
+        // Initialize Three.js scene
+        function initScene() {
+            // Scene setup
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            
+            // Create sunset gradient background
+            createSunsetSky();
+            
+            document.body.appendChild(renderer.domElement);
+            
+            // Camera position - lower and more forward for landscape view
+            camera.position.set(0, 20, 200);
+            camera.lookAt(0, 0, -200);
+            
+            // Create wireframe terrain
+            createTerrain();
+            
+            // Create sunset sun
+            createSun();
+            
+            // Add atmospheric lighting
+            createLighting();
+            
+            // Start animation loop
+            animate();
+            
+            status.textContent = "Beach sunset scene initialized - Select a track";
         }
         
-        // Create new analyser for each track
-        if (analyser) {
-          analyser.disconnect();
+        function createSunsetSky() {
+            // Create gradient background using canvas
+            const canvas = document.createElement('canvas');
+            canvas.width = 2;
+            canvas.height = 256;
+            const context = canvas.getContext('2d');
+            
+            // Create sunset gradient
+            const gradient = context.createLinearGradient(0, 0, 0, 256);
+            gradient.addColorStop(0, '#ff6b35');    // Orange top
+            gradient.addColorStop(0.3, '#ff8c42');  // Orange-pink
+            gradient.addColorStop(0.6, '#ffa726');  // Yellow-orange
+            gradient.addColorStop(0.8, '#ffb74d');  // Light orange
+            gradient.addColorStop(1, '#ffe0b2');    // Pale orange bottom
+            
+            context.fillStyle = gradient;
+            context.fillRect(0, 0, 2, 256);
+            
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.mapping = THREE.EquirectangularReflectionMapping;
+            scene.background = texture;
         }
         
-        analyser = audioContext.createAnalyser();
-        analyser.fftSize = 256;
-        dataArray = new Uint8Array(analyser.frequencyBinCount);
-
-        // Connect: audioSource -> analyser -> destination
-        audioSource.connect(analyser);
-        analyser.connect(audioContext.destination);
-        
-        console.log('Audio analyser setup complete');
-        return true;
-      } catch (error) {
-        status.textContent = "Error setting up audio analyser: " + error.message;
-        console.error('Audio analyser error:', error);
-        return false;
-      }
-    }
-
-    function loadTrack(source) {
-      if (!audioContext) {
-        status.textContent = "Audio context not initialized";
-        return;
-      }
-
-      // Reset audio element
-      audio.pause();
-      audio.currentTime = 0;
-      
-      // Add loading indicator
-      status.textContent = "Loading audio file...";
-      
-      // Set source and load
-      audio.src = source;
-      audio.load();
-      
-      // Success handler
-      audio.addEventListener('loadeddata', () => {
-        console.log('Audio loaded successfully:', {
-          duration: audio.duration,
-          src: audio.src,
-          readyState: audio.readyState
-        });
-        
-        // Setup analyser on first successful load
-        if (setupAudioAnalyser()) {
-          status.textContent = "Track loaded - Ready to play";
-          playPauseBtn.disabled = false;
-          seekBar.disabled = false;
+        function createLighting() {
+            // Ambient light for overall scene illumination
+            const ambientLight = new THREE.AmbientLight(0xffa726, 0.4);
+            scene.add(ambientLight);
+            
+            // Directional light simulating sunset
+            const sunsetLight = new THREE.DirectionalLight(0xff6b35, 0.8);
+            sunsetLight.position.set(-1, 1, -1);
+            scene.add(sunsetLight);
         }
-      }, { once: true });
-
-      // Error handler
-      audio.addEventListener('error', (e) => {
-        let errorMsg = "Error loading audio file";
-        if (audio.error) {
-          switch(audio.error.code) {
-            case 1:
-              errorMsg = "Audio loading aborted";
-              break;
-            case 2:
-              errorMsg = "Network error loading audio file";
-              break;
-            case 3:
-              errorMsg = "Audio format not supported or corrupted";
-              break;
-            case 4:
-              errorMsg = "Audio file not found";
-              break;
-            default:
-              errorMsg = "Unknown audio error (code: " + audio.error.code + ")";
-          }
-        }
-        status.textContent = errorMsg;
-        console.error('Audio error details:', {
-          error: audio.error,
-          src: audio.src,
-          readyState: audio.readyState,
-          networkState: audio.networkState,
-          fileSource: source.startsWith('blob:') ? 'uploaded file' : 'local file'
-        });
         
-        // Reset UI
-        playPauseBtn.disabled = true;
-        seekBar.disabled = true;
-      }, { once: true });
-
-      // Add basic debugging
-      audio.addEventListener('loadstart', () => {
-        console.log('Loading audio file');
-        status.textContent = "Loading audio...";
-      }, { once: true });
-
-      audio.addEventListener('canplay', () => {
-        console.log('Audio can start playing');
-      }, { once: true });
-    }
-
-    function animate() {
-      requestAnimationFrame(animate);
-
-      let hasFrequencyData = false;
-      
-      if (analyser && dataArray) {
-        analyser.getByteFrequencyData(dataArray);
-        
-        // Check if we actually have frequency data
-        hasFrequencyData = dataArray.some(val => val > 0);
-        
-        if (hasFrequencyData) {
-          const pos = terrain.geometry.attributes.position;
-          const halfCols = Math.floor(cols / 2);
-
-          // Shift terrain data back
-          for (let z = rows - 1; z > 0; z--) {
-            for (let x = 0; x < cols; x++) {
-              const i = z * cols + x;
-              const prev = (z - 1) * cols + x;
-              pos.array[i * 3 + 1] = pos.array[prev * 3 + 1];
+        function createTerrain() {
+            const geometry = new THREE.PlaneGeometry(800, 800, 100, 100);
+            geometry.rotateX(-Math.PI / 2);
+            
+            // Create initial flowing landscape
+            const positions = geometry.attributes.position;
+            for (let i = 0; i < positions.count; i++) {
+                const x = positions.getX(i);
+                const z = positions.getZ(i);
+                
+                // Create flowing hills and valleys like ocean waves
+                const wave1 = Math.sin(x * 0.01) * 20;
+                const wave2 = Math.cos(z * 0.008) * 15;
+                const wave3 = Math.sin((x + z) * 0.005) * 25;
+                const noise = Math.random() * 5;
+                
+                const height = wave1 + wave2 + wave3 + noise;
+                positions.setY(i, height);
             }
-          }
-
-          // Add new frequency data to front row
-          for (let x = 0; x < cols; x++) {
-            const i = x;
-            const mirrorIndex = x < halfCols ? x : cols - x - 1;
-            const bin = Math.floor((mirrorIndex / halfCols) * dataArray.length);
-            const magnitude = dataArray[Math.min(bin, dataArray.length - 1)] / 255;
-            pos.array[i * 3 + 1] = magnitude * 60;
-          }
-
-          pos.needsUpdate = true;
-
-          // Update sphere and glow based on bass
-          const bassAvg = dataArray.slice(0, 10).reduce((a, b) => a + b, 0) / 10;
-          const scale = 1 + (bassAvg / 255) * 2.5;
-          
-          // Scale the core sphere
-          sphere.scale.set(scale, scale, scale);
-          
-          // Scale both glow layers
-          sprite.scale.set(60 * scale, 60 * scale, 1);
-          innerGlow.scale.set(25 * scale, 25 * scale, 1);
-          
-          // Increase light intensity and make it pulse
-          pointLight.intensity = 2 + (bassAvg / 255) * 3;
-          
-          // Add subtle sphere material emissive pulsing
-          sphere.material.emissiveIntensity = 4 + (bassAvg / 255) * 2;
-        }
-      }
-      
-      // Fallback animation when no frequency data (no audio playing or issue with analyser)
-      if (!hasFrequencyData && !audio.paused && audio.currentTime > 0) {
-        const time = Date.now() * 0.003;
-        const pulse = Math.sin(time * 2) * 0.5 + 0.5;
-        
-        // Gentle pulsing animation
-        const scale = 1 + pulse * 0.3;
-        sphere.scale.set(scale, scale, scale);
-        sprite.scale.set(60 * scale, 60 * scale, 1);
-        innerGlow.scale.set(25 * scale, 25 * scale, 1);
-        pointLight.intensity = 2 + pulse * 1.5;
-        sphere.material.emissiveIntensity = 4 + pulse * 1.5;
-        
-        // Simple wave animation for terrain
-        const pos = terrain.geometry.attributes.position;
-        for (let x = 0; x < cols; x++) {
-          for (let z = 0; z < rows; z++) {
-            const i = z * cols + x;
-            const wave = Math.sin((x * 0.1) + (z * 0.1) + time) * 10 + 5;
-            pos.array[i * 3 + 1] = Math.max(0, wave);
-          }
-        }
-        pos.needsUpdate = true;
-      }
-
-      // Update seek bar (only for audio element, not demo)
-      if (!seekBar.dragging && audio.duration && !audio.paused) {
-        seekBar.value = (audio.currentTime / audio.duration) * 100;
-      }
-
-      renderer.render(scene, camera);
-    }
-
-    // Event listeners
-    startBtn.onclick = () => {
-      instructions.classList.add('hidden');
-      init();
-      initAudio();
-    };
-
-    const addTrackBtn = document.getElementById("addTrackBtn");
-    const fileInput = document.getElementById("fileInput");
-
-    addTrackBtn.onclick = () => {
-      if (!isInitialized) {
-        status.textContent = "Please click Start first";
-        return;
-      }
-      fileInput.click();
-    };
-
-    fileInput.onchange = (event) => {
-      const file = event.target.files[0];
-      if (file) {
-        // Validate file type
-        if (!file.type.startsWith('audio/')) {
-          status.textContent = "Please select a valid audio file";
-          return;
+            
+            // Blue ocean-like wireframe material
+            const material = new THREE.MeshBasicMaterial({
+                color: 0x0077be,  // Ocean blue
+                wireframe: true,
+                transparent: true,
+                opacity: 0.9
+            });
+            
+            terrain = new THREE.Mesh(geometry, material);
+            scene.add(terrain);
         }
         
-        // Check file size (limit to 50MB)
-        if (file.size > 50 * 1024 * 1024) {
-          status.textContent = "File too large (max 50MB)";
-          return;
+        function createSun() {
+            // Main sunset sun sphere
+            const sunGeometry = new THREE.SphereGeometry(25, 32, 32);
+            const sunMaterial = new THREE.MeshBasicMaterial({
+                color: 0xffa500,  // Sunset orange
+                transparent: false,
+                opacity: 1.0
+            });
+            
+            sun = new THREE.Mesh(sunGeometry, sunMaterial);
+            sun.position.set(0, 150, -300);
+            scene.add(sun);
+            
+            // Sunset glow effect with warm colors
+            const glowColors = [0xffb347, 0xff8c42, 0xff6b35, 0xff5722]; // Warm sunset colors
+            
+            for (let i = 1; i <= 4; i++) {
+                const glowGeometry = new THREE.SphereGeometry(25 + (i * 15), 32, 32);
+                const glowMaterial = new THREE.MeshBasicMaterial({
+                    color: glowColors[i - 1],
+                    transparent: true,
+                    opacity: 0.2 / i
+                });
+                
+                const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+                glow.position.copy(sun.position);
+                scene.add(glow);
+                
+                // Store glow references on sun object
+                if (!sun.glows) sun.glows = [];
+                sun.glows.push(glow);
+            }
+            
+            // Warm sunset point light
+            const light = new THREE.PointLight(0xffa500, 3, 500);
+            light.position.copy(sun.position);
+            scene.add(light);
+            sun.light = light;
         }
         
-        console.log('Selected file:', {
-          name: file.name,
-          type: file.type,
-          size: file.size
+        // Audio functions
+        async function initAudio() {
+            try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                
+                if (audioContext.state === 'suspended') {
+                    await audioContext.resume();
+                }
+                
+                // Create analyser
+                analyser = audioContext.createAnalyser();
+                analyser.fftSize = 128;
+                dataArray = new Uint8Array(analyser.frequencyBinCount);
+                
+                return true;
+            } catch (error) {
+                console.error('Audio context error:', error);
+                status.textContent = "Audio initialization failed";
+                return false;
+            }
+        }
+        
+        function loadAudio(src) {
+            return new Promise((resolve, reject) => {
+                audio.src = src;
+                audio.load();
+                
+                const onLoad = () => {
+                    audio.removeEventListener('canplaythrough', onLoad);
+                    audio.removeEventListener('error', onError);
+                    resolve();
+                };
+                
+                const onError = () => {
+                    audio.removeEventListener('canplaythrough', onLoad);
+                    audio.removeEventListener('error', onError);
+                    reject(new Error('Failed to load audio'));
+                };
+                
+                audio.addEventListener('canplaythrough', onLoad);
+                audio.addEventListener('error', onError);
+            });
+        }
+        
+        async function setupAudioSource() {
+            if (audioSource) {
+                audioSource.disconnect();
+            }
+            
+            try {
+                audioSource = audioContext.createMediaElementSource(audio);
+                audioSource.connect(analyser);
+                analyser.connect(audioContext.destination);
+                return true;
+            } catch (error) {
+                // If source already exists, just reconnect
+                try {
+                    audioSource.connect(analyser);
+                    analyser.connect(audioContext.destination);
+                    return true;
+                } catch (reconnectError) {
+                    console.error('Audio source setup failed:', error);
+                    return false;
+                }
+            }
+        }
+        
+        async function playTrack(src) {
+            try {
+                status.textContent = "Loading track...";
+                
+                // Initialize audio if needed
+                if (!audioContext) {
+                    const audioOK = await initAudio();
+                    if (!audioOK) return;
+                }
+                
+                // Load the audio file
+                await loadAudio(src);
+                
+                // Setup audio source for analysis
+                const sourceOK = await setupAudioSource();
+                if (!sourceOK) {
+                    status.textContent = "Audio source setup failed";
+                    return;
+                }
+                
+                // Update UI
+                currentTrack = src;
+                playBtn.textContent = "▶ Play";
+                status.textContent = "Track loaded - Ready to play";
+                
+            } catch (error) {
+                console.error('Error loading track:', error);
+                status.textContent = "Error loading track: " + error.message;
+            }
+        }
+        
+        async function togglePlay() {
+            if (!currentTrack) {
+                status.textContent = "No track selected";
+                return;
+            }
+            
+            try {
+                if (audioContext.state === 'suspended') {
+                    await audioContext.resume();
+                }
+                
+                if (audio.paused) {
+                    await audio.play();
+                    playBtn.textContent = "⏸ Pause";
+                    isPlaying = true;
+                    status.textContent = "Playing";
+                } else {
+                    audio.pause();
+                    playBtn.textContent = "▶ Play";
+                    isPlaying = false;
+                    status.textContent = "Paused";
+                }
+            } catch (error) {
+                console.error('Playback error:', error);
+                status.textContent = "Playback error: " + error.message;
+            }
+        }
+        
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            // Update visualization if audio is playing
+            if (isPlaying && analyser && dataArray) {
+                updateVisualization();
+            } else {
+                // Gentle flowing animation when no audio
+                animateIdle();
+            }
+            
+            // Subtle camera movement for immersion
+            const time = Date.now() * 0.0005;
+            camera.position.x = Math.sin(time) * 10;
+            camera.lookAt(Math.sin(time * 0.5) * 20, 0, -200);
+            
+            renderer.render(scene, camera);
+        }
+        
+        function animateIdle() {
+            // Gentle flowing ocean waves when not playing music
+            const positions = terrain.geometry.attributes.position;
+            const time = Date.now() * 0.001;
+            
+            for (let i = 0; i < positions.count; i++) {
+                const x = positions.getX(i);
+                const z = positions.getZ(i);
+                
+                // Gentle flowing ocean waves
+                const wave1 = Math.sin(x * 0.01 + time * 0.5) * 20;
+                const wave2 = Math.cos(z * 0.008 + time * 0.3) * 15;
+                const wave3 = Math.sin((x + z) * 0.005 + time * 0.2) * 25;
+                
+                const height = wave1 + wave2 + wave3;
+                positions.setY(i, height);
+            }
+            
+            positions.needsUpdate = true;
+            
+            // Gentle sun pulsing
+            const pulse = Math.sin(time * 0.5) * 0.1 + 1;
+            sun.scale.set(pulse, pulse, pulse);
+            
+            // Maintain sunset colors
+            terrain.material.color.setRGB(0, 0.47, 0.75); // Ocean blue
+            sun.material.color.setRGB(1, 0.65, 0); // Sunset orange
+        }
+        
+        function updateVisualization() {
+            analyser.getByteFrequencyData(dataArray);
+            
+            // Check if we have actual audio data
+            const hasData = dataArray.some(value => value > 0);
+            if (!hasData) return;
+            
+            // Calculate overall audio intensity
+            const overallIntensity = dataArray.reduce((a, b) => a + b, 0) / (dataArray.length * 255);
+            
+            // Update terrain based on frequency data with flowing waves
+            const positions = terrain.geometry.attributes.position;
+            const time = Date.now() * 0.001;
+            
+            for (let i = 0; i < positions.count; i++) {
+                const x = positions.getX(i);
+                const z = positions.getZ(i);
+                
+                // Map position to frequency data
+                const normalizedX = (x + 400) / 800; // Normalize to 0-1
+                const normalizedZ = (z + 400) / 800;
+                
+                // Get frequency data for this position
+                const freqIndex = Math.floor(normalizedX * dataArray.length);
+                const audioValue = dataArray[Math.min(freqIndex, dataArray.length - 1)] || 0;
+                const intensity = audioValue / 255;
+                
+                // Create flowing base landscape like ocean waves
+                const baseWave1 = Math.sin(x * 0.01 + time * 2) * 20;
+                const baseWave2 = Math.cos(z * 0.008 + time * 1.5) * 15;
+                const baseWave3 = Math.sin((x + z) * 0.005 + time) * 25;
+                
+                // Add audio-reactive waves
+                const audioWave1 = Math.sin(x * 0.02 + time * 3) * intensity * 40;
+                const audioWave2 = Math.cos(z * 0.015 + time * 2.5) * intensity * 30;
+                const audioWave3 = Math.sin((x - z) * 0.01 + time * 4) * intensity * 35;
+                
+                // Combine waves for flowing ocean effect
+                const height = baseWave1 + baseWave2 + baseWave3 + 
+                              audioWave1 + audioWave2 + audioWave3;
+                
+                positions.setY(i, height);
+            }
+            
+            positions.needsUpdate = true;
+            
+            // Make waves more vibrant blue during intense music
+            const blueIntensity = Math.min(1, 0.6 + (overallIntensity * 0.4));
+            terrain.material.color.setRGB(0, 0.47 * blueIntensity, 0.75 * blueIntensity);
+            
+            // Update sunset sun based on bass frequencies
+            const bassData = dataArray.slice(0, 10);
+            const bassAverage = bassData.reduce((a, b) => a + b, 0) / bassData.length;
+            const bassIntensity = bassAverage / 255;
+            
+            // Scale sun with dramatic sunset effect
+            const scale = 1 + (bassIntensity * 2);
+            sun.scale.set(scale, scale, scale);
+            
+            // Make sun more intense orange during bass hits
+            const sunIntensity = Math.min(1, 0.8 + (bassIntensity * 0.2));
+            sun.material.color.setRGB(1, 0.65 * sunIntensity, 0);
+            
+            // Update glow layers with sunset colors
+            if (sun.glows) {
+                sun.glows.forEach((glow, index) => {
+                    const glowScale = scale + (index * 0.3);
+                    glow.scale.set(glowScale, glowScale, glowScale);
+                    glow.material.opacity = (0.2 / (index + 1)) * (1 + bassIntensity * 2);
+                });
+            }
+            
+            // Update warm sunset light intensity
+            if (sun.light) {
+                sun.light.intensity = 3 + (bassIntensity * 5);
+            }
+        }
+        
+        // Event listeners
+        trackSelect.addEventListener('change', (e) => {
+            if (e.target.value) {
+                playTrack(e.target.value);
+            }
         });
         
-        const url = URL.createObjectURL(file);
-        
-        // Add new file to existing options (don't clear the example tracks)
-        const option = document.createElement("option");
-        option.textContent = file.name + " (uploaded)";
-        option.value = url;
-        trackSelect.appendChild(option);
-        trackSelect.value = url;
-        
-        loadTrack(url);
-      }
-    };
-
-    playPauseBtn.onclick = async () => {
-      if (!audioContext) return;
-
-      if (audioContext.state === 'suspended') {
-        await audioContext.resume();
-      }
-
-      if (audio.paused) {
-        audio.play().then(() => {
-          playPauseBtn.textContent = '⏸';
-          status.textContent = "Playing - " + (trackSelect.selectedOptions[0]?.text || "Audio");
-        }).catch(error => {
-          status.textContent = "Error playing audio: " + error.message;
+        uploadBtn.addEventListener('click', () => {
+            fileInput.click();
         });
-      } else {
-        audio.pause();
-        playPauseBtn.textContent = '▶';
-        status.textContent = "Paused";
-      }
-    };
-
-    trackSelect.onchange = () => {
-      if (trackSelect.value) {
-        loadTrack(trackSelect.value);
-      }
-    };
-
-    seekBar.addEventListener('input', () => {
-      seekBar.dragging = true;
-    });
-
-    seekBar.addEventListener('change', () => {
-      if (audio.duration) {
-        audio.currentTime = (seekBar.value / 100) * audio.duration;
-      }
-      seekBar.dragging = false;
-    });
-
-    audio.onended = () => {
-      playPauseBtn.textContent = '▶';
-      status.textContent = "Track ended";
-    };
-
-    // Handle window resize
-    window.addEventListener('resize', () => {
-      if (camera && renderer) {
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-      }
-    });
-  </script>
+        
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const url = URL.createObjectURL(file);
+                playTrack(url);
+                
+                // Add to dropdown
+                const option = document.createElement('option');
+                option.value = url;
+                option.textContent = file.name;
+                trackSelect.appendChild(option);
+                trackSelect.value = url;
+            }
+        });
+        
+        playBtn.addEventListener('click', togglePlay);
+        
+        volumeSlider.addEventListener('input', (e) => {
+            audio.volume = e.target.value / 100;
+        });
+        
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+        
+        // Initialize when page loads
+        window.addEventListener('load', () => {
+            initScene();
+            audio.volume = 0.5; // Set initial volume
+        });
+        
+        // Handle audio end
+        audio.addEventListener('ended', () => {
+            playBtn.textContent = "▶ Play";
+            isPlaying = false;
+            status.textContent = "Track ended";
+        });
+    </script>
 </body>
 </html>
