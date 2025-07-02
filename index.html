@@ -437,8 +437,8 @@
                 const newScale = currentScale + (targetScale - currentScale) * 0.1;
                 sun.scale.set(newScale, newScale, newScale);
                 
-                // Reduce emissive intensity during decay
-                sun.material.emissiveIntensity = 3 + (6 * terrainDecay); // Back to base intensity of 3
+                // Reduce emissive intensity during decay (back to base of 3)
+                sun.material.emissiveIntensity = 3 + (7 * terrainDecay);
                 
                 // Reduce sprite scale during decay
                 if (sun.sprite) {
@@ -475,27 +475,34 @@
 
             pos.needsUpdate = true;
 
-            // Bass-reactive glowing orb with increased reactivity
-            const bassData = dataArray.slice(0, 5);
-            const bassAverage = bassData.reduce((a, b) => a + b, 0) / bassData.length;
-            const bassIntensity = bassAverage / 255;
+            // Focus specifically on bass frequencies (20-250Hz range)
+            // With 256 FFT size, first few bins are the lowest frequencies
+            const subBass = dataArray.slice(0, 2);  // ~20-80Hz (kick drums, sub-bass)
+            const bass = dataArray.slice(2, 5);     // ~80-250Hz (bass guitars, bass synths)
             
-            // More reactive scaling - maximum 80% larger (1.8x)
-            const scale = 1 + (bassIntensity * 0.8);
+            // Calculate bass intensity with emphasis on sub-bass
+            const subBassAvg = subBass.reduce((a, b) => a + b, 0) / subBass.length;
+            const bassAvg = bass.reduce((a, b) => a + b, 0) / bass.length;
+            
+            // Weight sub-bass more heavily for kick drum reactivity
+            const bassIntensity = ((subBassAvg * 2) + bassAvg) / (3 * 255); // Weighted average
+            
+            // More dramatic scaling - maximum 100% larger (2x) for strong bass
+            const scale = 1 + (bassIntensity * 1.0);
             sun.scale.set(scale, scale, scale);
             
-            // Increase emissive intensity with bass for more dramatic effect
-            sun.material.emissiveIntensity = 3 + (bassIntensity * 3);
+            // Dramatic emissive intensity increase with bass
+            sun.material.emissiveIntensity = 3 + (bassIntensity * 4);
             
-            // Update sprite glow with more dramatic scaling
+            // Update sprite glow with bass reaction
             if (sun.sprite) {
                 const spriteScale = scale;
                 sun.sprite.scale.set(30 * spriteScale, 30 * spriteScale, 1);
             }
             
-            // Update light intensity with stronger reaction
+            // Strong light intensity reaction to bass
             if (sun.light) {
-                sun.light.intensity = 2.5 + (bassIntensity * 3.5);
+                sun.light.intensity = 2.5 + (bassIntensity * 5);
             }
         }
 
