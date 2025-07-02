@@ -1,670 +1,276 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Wireframe Audio Visualizer</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        
-        body {
-            background: linear-gradient(to bottom, #333, #666);
-            color: #fff;
-            font-family: 'Courier New', monospace;
-            overflow: hidden;
-        }
-        
-        #ui {
-            position: fixed;
-            top: 20px;
-            left: 20px;
-            z-index: 100;
-            display: flex;
-            gap: 15px;
-            align-items: center;
-            background: rgba(0, 0, 0, 0.3);
-            padding: 15px;
-            border: 1px solid rgba(255, 255, 255, 0.8);
-            border-radius: 10px;
-            backdrop-filter: blur(10px);
-        }
-        
-        select, button, input[type="range"] {
-            background: rgba(0, 0, 0, 0.3);
-            color: #fff;
-            border: 1px solid rgba(255, 255, 255, 0.6);
-            padding: 8px 12px;
-            font-family: inherit;
-            border-radius: 5px;
-        }
-        
-        button:hover, select:hover {
-            background: rgba(255, 255, 255, 0.2);
-            border-color: #fff;
-        }
-        
-        #playBtn {
-            min-width: 60px;
-        }
-        
-        #volume {
-            width: 100px;
-        }
-        
-        #fileInput {
-            display: none;
-        }
-        
-        #status {
-            position: fixed;
-            bottom: 20px;
-            left: 20px;
-            background: rgba(0, 0, 0, 0.3);
-            padding: 10px;
-            border: 1px solid rgba(255, 255, 255, 0.8);
-            border-radius: 10px;
-            backdrop-filter: blur(10px);
-        }
-        
-        canvas {
-            display: block;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <title>Wireframe Audio Visualizer</title>
+  <link href="https://fonts.googleapis.com/css2?family=Quantico&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: black;
+      font-family: 'Quantico', sans-serif;
+      color: white;
+      letter-spacing: 1px;
+    }
+
+    #controls {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      z-index: 10;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    #addTrackBtn,
+    #playPauseBtn {
+      background: black;
+      color: white;
+      border: 1px solid white;
+      padding: 6px 12px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    #addTrackBtn {
+      font-size: 22px;
+      padding: 4px 12px;
+    }
+
+    #trackSelect {
+      background: black;
+      color: white;
+      border: 1px solid white;
+      padding: 6px 8px;
+      font-family: 'Quantico', sans-serif;
+    }
+
+    #seekBar {
+      width: 200px;
+      height: 6px;
+      appearance: none;
+      background: white;
+      cursor: pointer;
+    }
+
+    #seekBar::-webkit-slider-thumb,
+    #seekBar::-moz-range-thumb {
+      height: 14px;
+      width: 14px;
+      background: white;
+      border-radius: 50%;
+      border: none;
+    }
+  </style>
 </head>
 <body>
-    <div id="ui">
-        <label>Theme:</label>
-        <select id="themeSelect">
-            <option value="blackwhite">Black & White</option>
-            <option value="beach" selected>Beach Sunset</option>
-            <option value="vaporwave">Vaporwave</option>
-            <option value="cyberpunk">Cyberpunk</option>
-            <option value="forest">Forest</option>
-            <option value="fire">Fire</option>
-            <option value="aurora">Northern Lights</option>
-        </select>
-        
-        <select id="trackSelect">
-            <option value="">Choose a track...</option>
-            <option value="./Cynthoni - Dork After Dark.mp3">Cynthoni - Dork After Dark</option>
-            <option value="./Cynthoni - Lychee Ice.mp3">Cynthoni - Lychee Ice</option>
-            <option value="./Joji - Die For You.mp3">Joji - Die For You</option>
-            <option value="./Porter Robinson - Sad Machine.mp3">Porter Robinson - Sad Machine</option>
-            <option value="./Radiohead - All I Need.mp3">Radiohead - All I Need</option>
-        </select>
-        
-        <button id="uploadBtn">Upload File</button>
-        <input type="file" id="fileInput" accept="audio/*">
-        
-        <button id="playBtn">▶ Play</button>
-        
-        <label>Volume:</label>
-        <input type="range" id="volume" min="0" max="100" value="50">
-    </div>
-    
-    <div id="status">Welcome to the themed audio visualizer - Select a theme and track</div>
-    
-    <audio id="audio"></audio>
+  <div id="controls">
+    <button id="addTrackBtn">+</button>
+    <select id="trackSelect">
+      <option value="Cynthoni - Dork After Dark.mp3">Cynthoni - Dork After Dark</option>
+      <option value="Cynthoni - Lychee Ice.mp3">Cynthoni - Lychee Ice</option>
+      <option value="Joji - Die For You.mp3">Joji - Die For You</option>
+      <option value="Porter Robinson - Sad Machine.mp3">Porter Robinson - Sad Machine</option>
+      <option value="Radiohead - All I Need.mp3">Radiohead - All I Need</option>
+    </select>
+    <button id="playPauseBtn">▶</button>
+    <input type="range" id="seekBar" value="0" min="0" max="100" step="0.1">
+    <input type="file" id="fileInput" accept="audio/*" style="display: none;">
+  </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script>
-        // Global variables
-        let scene, camera, renderer, terrain, sun;
-        let audioContext, analyser, audioSource, dataArray;
-        let isPlaying = false;
-        let currentTrack = null;
-        let currentTheme = 'beach';
-        
-        // Theme definitions
-        const themes = {
-            blackwhite: {
-                name: 'Black & White',
-                sky: ['#000000', '#333333', '#666666', '#999999', '#cccccc'],
-                terrain: 0xffffff,
-                sun: 0xffffff,
-                sunGlow: [0xffffff, 0xffffff, 0xffffff, 0xffffff],
-                light: 0xffffff,
-                uiBackground: 'rgba(0,0,0,0.7)',
-                uiBorder: 'rgba(255,255,255,0.8)'
-            },
-            beach: {
-                name: 'Beach Sunset',
-                sky: ['#ff6b35', '#ff8c42', '#ffa726', '#ffb74d', '#ffe0b2'],
-                terrain: 0x0077be,
-                sun: 0xffa500,
-                sunGlow: [0xffb347, 0xff8c42, 0xff6b35, 0xff5722],
-                light: 0xffa500,
-                uiBackground: 'rgba(255, 107, 53, 0.2)',
-                uiBorder: 'rgba(255, 255, 255, 0.8)'
-            },
-            vaporwave: {
-                name: 'Vaporwave',
-                sky: ['#ff006e', '#fb5607', '#ffbe0b', '#8338ec', '#3a86ff'],
-                terrain: 0xff10f0,
-                sun: 0xffffff,
-                sunGlow: [0xff10f0, 0x00ffff, 0xff006e, 0x8338ec],
-                light: 0xff10f0,
-                uiBackground: 'rgba(255, 16, 240, 0.2)',
-                uiBorder: 'rgba(0, 255, 255, 0.8)'
-            },
-            cyberpunk: {
-                name: 'Cyberpunk',
-                sky: ['#0a0a0a', '#1a1a2e', '#16213e', '#0f3460', '#533483'],
-                terrain: 0x00ffff,
-                sun: 0x00ff00,
-                sunGlow: [0x00ffff, 0x00ff00, 0x39ff14, 0x0080ff],
-                light: 0x00ff00,
-                uiBackground: 'rgba(0, 255, 255, 0.2)',
-                uiBorder: 'rgba(0, 255, 0, 0.8)'
-            },
-            forest: {
-                name: 'Forest',
-                sky: ['#2d5016', '#3a5a40', '#a68b5b', '#d4a574', '#e9c46a'],
-                terrain: 0x228b22,
-                sun: 0xffd700,
-                sunGlow: [0xffd700, 0xffa500, 0xff8c00, 0xff6347],
-                light: 0xffd700,
-                uiBackground: 'rgba(45, 80, 22, 0.3)',
-                uiBorder: 'rgba(255, 215, 0, 0.8)'
-            },
-            fire: {
-                name: 'Fire',
-                sky: ['#8b0000', '#dc143c', '#ff4500', '#ff6347', '#ffa500'],
-                terrain: 0xff4500,
-                sun: 0xffff00,
-                sunGlow: [0xffff00, 0xffa500, 0xff4500, 0xdc143c],
-                light: 0xff4500,
-                uiBackground: 'rgba(139, 0, 0, 0.3)',
-                uiBorder: 'rgba(255, 255, 0, 0.8)'
-            },
-            aurora: {
-                name: 'Northern Lights',
-                sky: ['#000428', '#004e92', '#009ffd', '#00d2ff', '#ffffff'],
-                terrain: 0x40e0d0,
-                sun: 0x9370db,
-                sunGlow: [0x9370db, 0x8a2be2, 0x4b0082, 0x6a5acd],
-                light: 0x9370db,
-                uiBackground: 'rgba(0, 4, 40, 0.3)',
-                uiBorder: 'rgba(147, 112, 219, 0.8)'
-            }
-        };
-        
-        // UI elements
-        const audio = document.getElementById('audio');
-        const themeSelect = document.getElementById('themeSelect');
-        const trackSelect = document.getElementById('trackSelect');
-        const uploadBtn = document.getElementById('uploadBtn');
-        const fileInput = document.getElementById('fileInput');
-        const playBtn = document.getElementById('playBtn');
-        const volumeSlider = document.getElementById('volume');
-        const status = document.getElementById('status');
-        
-        // Initialize Three.js scene
-        function initScene() {
-            // Scene setup
-            scene = new THREE.Scene();
-            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            
-            // Create themed background
-            createThemedSky();
-            
-            document.body.appendChild(renderer.domElement);
-            
-            // Camera position - lower and more forward for landscape view
-            camera.position.set(0, 20, 200);
-            camera.lookAt(0, 0, -200);
-            
-            // Create wireframe terrain
-            createTerrain();
-            
-            // Create themed sun
-            createSun();
-            
-            // Add atmospheric lighting
-            createLighting();
-            
-            // Apply initial theme to UI
-            applyThemeToUI();
-            
-            // Start animation loop
-            animate();
-            
-            status.textContent = `${themes[currentTheme].name} scene initialized - Select a track`;
+  <audio id="audio"></audio>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.module.js"
+      }
+    }
+  </script>
+
+  <script type="module">
+    import * as THREE from 'three';
+    
+    let scene, camera, renderer, terrain, analyser, dataArray;
+    let sphere, sprite, pointLight;
+
+
+    const audio = document.getElementById('audio');
+    const playPauseBtn = document.getElementById("playPauseBtn");
+    const trackSelect = document.getElementById("trackSelect");
+    const seekBar = document.getElementById("seekBar");
+
+    const cols = 64, rows = 64, terrainWidth = 300, terrainDepth = 800;
+    const geometry = new THREE.PlaneGeometry(terrainWidth, terrainDepth, cols - 1, rows - 1);
+    geometry.rotateX(-Math.PI / 2);
+    const terrainMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true });
+    terrain = new THREE.Mesh(geometry, terrainMaterial);
+
+    function createFeatheredGlowTexture() {
+      const size = 256;
+      const canvas = document.createElement('canvas');
+      canvas.width = canvas.height = size;
+      const ctx = canvas.getContext('2d');
+
+      const gradient = ctx.createRadialGradient(
+        size / 2, size / 2, 10,
+        size / 2, size / 2, size / 2
+      );
+      gradient.addColorStop(0, 'rgba(255,255,255,0.5)');
+      gradient.addColorStop(0.6, 'rgba(255,255,255,0.1)');
+      gradient.addColorStop(1, 'rgba(255,255,255,0)');
+
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, size, size);
+
+      return new THREE.CanvasTexture(canvas);
+    }
+
+    function init() {
+      scene = new THREE.Scene();
+      camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+      camera.position.set(0, 10, 100);
+      camera.lookAt(0, 50, 0);
+
+      renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      document.body.appendChild(renderer.domElement);
+
+      scene.add(terrain);
+
+// Core sphere (bright light center)
+const sphereGeometry = new THREE.SphereGeometry(6, 64, 64);
+const sphereMaterial = new THREE.MeshStandardMaterial({
+  color: 0xffffff,
+  emissive: 0xffffff,
+  emissiveIntensity: 3,
+  roughness: 0.2,
+  metalness: 0.1
+});
+sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+sphere.position.set(0, 90, 0);
+scene.add(sphere);
+
+// Sprite-based glow (facing camera, soft bloom)
+const spriteMap = new THREE.TextureLoader().load('https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/sprites/glow.png');
+const spriteMaterial = new THREE.SpriteMaterial({
+  map: spriteMap,
+  color: 0x00ffff,
+  transparent: true,
+  blending: THREE.AdditiveBlending
+});
+sprite = new THREE.Sprite(spriteMaterial);  // use the global 'sprite'
+sprite.scale.set(30, 30, 1); // Adjust size to match the glow you want
+sprite.position.copy(sphere.position);
+scene.add(sprite);
+
+// Point light for realistic illumination
+pointLight = new THREE.PointLight(0x00ffff, 2.5, 200); // use the global 'pointLight'
+pointLight.position.copy(sphere.position);
+scene.add(pointLight);
+
+
+      animate();
+    }
+
+    function loadTrack(filename) {
+      audio.src = filename;
+      audio.load();
+      audio.play();
+      playPauseBtn.textContent = '⏸';
+
+      const audioCtx = new AudioContext();
+      const source = audioCtx.createMediaElementSource(audio);
+      analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 256;
+      dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+      source.connect(analyser);
+      analyser.connect(audioCtx.destination);
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      if (analyser && dataArray) {
+        analyser.getByteFrequencyData(dataArray);
+        const pos = terrain.geometry.attributes.position;
+        const halfCols = Math.floor(cols / 2);
+
+        for (let z = rows - 1; z > 0; z--) {
+          for (let x = 0; x < cols; x++) {
+            const i = z * cols + x;
+            const prev = (z - 1) * cols + x;
+            pos.array[i * 3 + 1] = pos.array[prev * 3 + 1];
+          }
         }
-        
-        function createThemedSky() {
-            const canvas = document.createElement('canvas');
-            canvas.width = 2;
-            canvas.height = 256;
-            const context = canvas.getContext('2d');
-            
-            // Create gradient using current theme colors
-            const gradient = context.createLinearGradient(0, 0, 0, 256);
-            const skyColors = themes[currentTheme].sky;
-            
-            skyColors.forEach((color, index) => {
-                gradient.addColorStop(index / (skyColors.length - 1), color);
-            });
-            
-            context.fillStyle = gradient;
-            context.fillRect(0, 0, 2, 256);
-            
-            const texture = new THREE.CanvasTexture(canvas);
-            texture.mapping = THREE.EquirectangularReflectionMapping;
-            scene.background = texture;
+
+        for (let x = 0; x < cols; x++) {
+          const i = x;
+          const mirrorIndex = x < halfCols ? x : cols - x - 1;
+          const bin = Math.floor((mirrorIndex / halfCols) * dataArray.length);
+          const magnitude = dataArray[Math.min(bin, dataArray.length - 1)] / 255;
+          pos.array[i * 3 + 1] = magnitude * 60;
         }
-        
-        function applyTheme(themeName) {
-            currentTheme = themeName;
-            
-            if (scene) {
-                // Update sky
-                createThemedSky();
-                
-                // Update terrain color
-                if (terrain) {
-                    terrain.material.color.setHex(themes[currentTheme].terrain);
-                }
-                
-                // Update sun color
-                if (sun) {
-                    sun.material.color.setHex(themes[currentTheme].sun);
-                    
-                    // Update glow colors
-                    if (sun.glows) {
-                        sun.glows.forEach((glow, index) => {
-                            if (themes[currentTheme].sunGlow[index]) {
-                                glow.material.color.setHex(themes[currentTheme].sunGlow[index]);
-                            }
-                        });
-                    }
-                    
-                    // Update light color
-                    if (sun.light) {
-                        sun.light.color.setHex(themes[currentTheme].light);
-                    }
-                }
-                
-                // Update UI colors
-                applyThemeToUI();
-                
-                status.textContent = `Switched to ${themes[currentTheme].name} theme`;
-            }
+
+        pos.needsUpdate = true;
+
+        if (!seekBar.dragging && audio.duration) {
+          seekBar.value = (audio.currentTime / audio.duration) * 100;
         }
-        
-        function applyThemeToUI() {
-            const theme = themes[currentTheme];
-            const ui = document.getElementById('ui');
-            const statusEl = document.getElementById('status');
-            
-            ui.style.background = theme.uiBackground;
-            ui.style.borderColor = theme.uiBorder;
-            statusEl.style.background = theme.uiBackground;
-            statusEl.style.borderColor = theme.uiBorder;
-        }
-        
-        function createLighting() {
-            // Ambient light for overall scene illumination
-            const ambientLight = new THREE.AmbientLight(themes[currentTheme].light, 0.4);
-            scene.add(ambientLight);
-            
-            // Directional light using theme color
-            const directionalLight = new THREE.DirectionalLight(themes[currentTheme].light, 0.8);
-            directionalLight.position.set(-1, 1, -1);
-            scene.add(directionalLight);
-        }
-        
-        function createTerrain() {
-            const geometry = new THREE.PlaneGeometry(800, 800, 100, 100);
-            geometry.rotateX(-Math.PI / 2);
-            
-            // Create completely flat landscape initially
-            const positions = geometry.attributes.position;
-            for (let i = 0; i < positions.count; i++) {
-                // Set all heights to 0 for perfectly flat terrain
-                positions.setY(i, 0);
-            }
-            
-            // Themed wireframe material
-            const material = new THREE.MeshBasicMaterial({
-                color: themes[currentTheme].terrain,
-                wireframe: true,
-                transparent: true,
-                opacity: 0.9
-            });
-            
-            terrain = new THREE.Mesh(geometry, material);
-            scene.add(terrain);
-        }
-        
-        function createSun() {
-            // Main themed sun sphere - smaller initial size
-            const sunGeometry = new THREE.SphereGeometry(20, 32, 32); // Reduced from 25 to 20
-            const sunMaterial = new THREE.MeshBasicMaterial({
-                color: themes[currentTheme].sun,
-                transparent: false,
-                opacity: 1.0
-            });
-            
-            sun = new THREE.Mesh(sunGeometry, sunMaterial);
-            sun.position.set(0, 150, -300);
-            scene.add(sun);
-            
-            // Themed glow effect with theme colors - smaller glow layers
-            const glowColors = themes[currentTheme].sunGlow;
-            
-            for (let i = 1; i <= 4; i++) {
-                const glowGeometry = new THREE.SphereGeometry(20 + (i * 10), 32, 32); // Reduced glow sizes
-                const glowMaterial = new THREE.MeshBasicMaterial({
-                    color: glowColors[i - 1],
-                    transparent: true,
-                    opacity: 0.2 / i
-                });
-                
-                const glow = new THREE.Mesh(glowGeometry, glowMaterial);
-                glow.position.copy(sun.position);
-                scene.add(glow);
-                
-                // Store glow references on sun object
-                if (!sun.glows) sun.glows = [];
-                sun.glows.push(glow);
-            }
-            
-            // Themed point light
-            const light = new THREE.PointLight(themes[currentTheme].light, 3, 500);
-            light.position.copy(sun.position);
-            scene.add(light);
-            sun.light = light;
-        }
-        
-        // Audio functions
-        async function initAudio() {
-            try {
-                audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                
-                if (audioContext.state === 'suspended') {
-                    await audioContext.resume();
-                }
-                
-                // Create analyser
-                analyser = audioContext.createAnalyser();
-                analyser.fftSize = 128;
-                dataArray = new Uint8Array(analyser.frequencyBinCount);
-                
-                return true;
-            } catch (error) {
-                console.error('Audio context error:', error);
-                status.textContent = "Audio initialization failed";
-                return false;
-            }
-        }
-        
-        function loadAudio(src) {
-            return new Promise((resolve, reject) => {
-                audio.src = src;
-                audio.load();
-                
-                const onLoad = () => {
-                    audio.removeEventListener('canplaythrough', onLoad);
-                    audio.removeEventListener('error', onError);
-                    resolve();
-                };
-                
-                const onError = () => {
-                    audio.removeEventListener('canplaythrough', onLoad);
-                    audio.removeEventListener('error', onError);
-                    reject(new Error('Failed to load audio'));
-                };
-                
-                audio.addEventListener('canplaythrough', onLoad);
-                audio.addEventListener('error', onError);
-            });
-        }
-        
-        async function setupAudioSource() {
-            if (audioSource) {
-                audioSource.disconnect();
-            }
-            
-            try {
-                audioSource = audioContext.createMediaElementSource(audio);
-                audioSource.connect(analyser);
-                analyser.connect(audioContext.destination);
-                return true;
-            } catch (error) {
-                // If source already exists, just reconnect
-                try {
-                    audioSource.connect(analyser);
-                    analyser.connect(audioContext.destination);
-                    return true;
-                } catch (reconnectError) {
-                    console.error('Audio source setup failed:', error);
-                    return false;
-                }
-            }
-        }
-        
-        async function playTrack(src) {
-            try {
-                status.textContent = "Loading track...";
-                
-                // Initialize audio if needed
-                if (!audioContext) {
-                    const audioOK = await initAudio();
-                    if (!audioOK) return;
-                }
-                
-                // Load the audio file
-                await loadAudio(src);
-                
-                // Setup audio source for analysis
-                const sourceOK = await setupAudioSource();
-                if (!sourceOK) {
-                    status.textContent = "Audio source setup failed";
-                    return;
-                }
-                
-                // Update UI
-                currentTrack = src;
-                playBtn.textContent = "▶ Play";
-                status.textContent = "Track loaded - Ready to play";
-                
-            } catch (error) {
-                console.error('Error loading track:', error);
-                status.textContent = "Error loading track: " + error.message;
-            }
-        }
-        
-        async function togglePlay() {
-            if (!currentTrack) {
-                status.textContent = "No track selected";
-                return;
-            }
-            
-            try {
-                if (audioContext.state === 'suspended') {
-                    await audioContext.resume();
-                }
-                
-                if (audio.paused) {
-                    await audio.play();
-                    playBtn.textContent = "⏸ Pause";
-                    isPlaying = true;
-                    status.textContent = "Playing";
-                } else {
-                    audio.pause();
-                    playBtn.textContent = "▶ Play";
-                    isPlaying = false;
-                    status.textContent = "Paused";
-                }
-            } catch (error) {
-                console.error('Playback error:', error);
-                status.textContent = "Playback error: " + error.message;
-            }
-        }
-        
-        // Animation loop
-        function animate() {
-            requestAnimationFrame(animate);
-            
-            // Update visualization if audio is playing
-            if (isPlaying && analyser && dataArray) {
-                updateVisualization();
-            } else {
-                // Gentle flowing animation when no audio
-                animateIdle();
-            }
-            
-            // Subtle camera movement for immersion
-            const time = Date.now() * 0.0005;
-            camera.position.x = Math.sin(time) * 10;
-            camera.lookAt(Math.sin(time * 0.5) * 20, 0, -200);
-            
-            renderer.render(scene, camera);
-        }
-        
-        function animateIdle() {
-            // Keep terrain completely flat when no music is playing
-            const positions = terrain.geometry.attributes.position;
-            for (let i = 0; i < positions.count; i++) {
-                positions.setY(i, 0); // Flat terrain
-            }
-            positions.needsUpdate = true;
-            
-            // Only gentle sun pulsing when not playing music
-            const time = Date.now() * 0.001;
-            const pulse = Math.sin(time * 0.8) * 0.05 + 1; // Very subtle pulse
-            sun.scale.set(pulse, pulse, pulse);
-            
-            // Maintain theme colors
-            terrain.material.color.setHex(themes[currentTheme].terrain);
-            sun.material.color.setHex(themes[currentTheme].sun);
-        }
-        
-        function updateVisualization() {
-            analyser.getByteFrequencyData(dataArray);
-            
-            // Check if we have actual audio data
-            const hasData = dataArray.some(value => value > 0);
-            if (!hasData) return;
-            
-            // Calculate overall audio intensity for terrain color changes
-            const overallIntensity = dataArray.reduce((a, b) => a + b, 0) / (dataArray.length * 255);
-            
-            // Update terrain to create hills based on frequency data
-            const positions = terrain.geometry.attributes.position;
-            
-            for (let i = 0; i < positions.count; i++) {
-                const x = positions.getX(i);
-                const z = positions.getZ(i);
-                
-                // Map position to frequency data
-                const normalizedX = (x + 400) / 800; // Normalize to 0-1
-                
-                // Get frequency data for this position
-                const freqIndex = Math.floor(normalizedX * dataArray.length);
-                const audioValue = dataArray[Math.min(freqIndex, dataArray.length - 1)] || 0;
-                const intensity = audioValue / 255;
-                
-                // Create hills based on audio frequencies
-                const height = intensity * 60; // Height based on frequency strength
-                
-                positions.setY(i, height);
-            }
-            
-            positions.needsUpdate = true;
-            
-            // Make terrain more vibrant during intense music
-            const baseColor = new THREE.Color(themes[currentTheme].terrain);
-            const intensityMultiplier = Math.min(1, 0.7 + (overallIntensity * 0.3));
-            terrain.material.color.copy(baseColor).multiplyScalar(intensityMultiplier);
-            
-            // Focus on BASS frequencies for sun reactivity (0-5 are the lowest frequencies)
-            const bassData = dataArray.slice(0, 5);
-            const bassAverage = bassData.reduce((a, b) => a + b, 0) / bassData.length;
-            const bassIntensity = bassAverage / 255;
-            
-            // Make sun react strongly to bass hits with smaller max size
-            const scale = 1 + (bassIntensity * 0.8); // Reduced from 2 to 0.8
-            sun.scale.set(scale, scale, scale);
-            
-            // Make sun more intense during bass hits
-            const baseSunColor = new THREE.Color(themes[currentTheme].sun);
-            const sunIntensityMultiplier = Math.min(1.5, 0.8 + (bassIntensity * 0.7));
-            sun.material.color.copy(baseSunColor).multiplyScalar(sunIntensityMultiplier);
-            
-            // Update glow layers with theme colors - react to bass
-            if (sun.glows) {
-                sun.glows.forEach((glow, index) => {
-                    const glowScale = scale + (index * 0.15); // Reduced glow scaling
-                    glow.scale.set(glowScale, glowScale, glowScale);
-                    glow.material.opacity = (0.2 / (index + 1)) * (1 + bassIntensity * 3); // More opacity reaction to bass
-                });
-            }
-            
-            // Update themed light intensity - react to bass
-            if (sun.light) {
-                sun.light.intensity = 3 + (bassIntensity * 4); // Strong bass reaction
-            }
-        }
-        
-        // Event listeners
-        themeSelect.addEventListener('change', (e) => {
-            applyTheme(e.target.value);
-        });
-        
-        trackSelect.addEventListener('change', (e) => {
-            if (e.target.value) {
-                playTrack(e.target.value);
-            }
-        });
-        
-        uploadBtn.addEventListener('click', () => {
-            fileInput.click();
-        });
-        
-        fileInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                const url = URL.createObjectURL(file);
-                playTrack(url);
-                
-                // Add to dropdown
-                const option = document.createElement('option');
-                option.value = url;
-                option.textContent = file.name;
-                trackSelect.appendChild(option);
-                trackSelect.value = url;
-            }
-        });
-        
-        playBtn.addEventListener('click', togglePlay);
-        
-        volumeSlider.addEventListener('input', (e) => {
-            audio.volume = e.target.value / 100;
-        });
-        
-        // Handle window resize
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
-        
-        // Initialize when page loads
-        window.addEventListener('load', () => {
-            initScene();
-            audio.volume = 0.5; // Set initial volume
-        });
-        
-        // Handle audio end
-        audio.addEventListener('ended', () => {
-            playBtn.textContent = "▶ Play";
-            isPlaying = false;
-            status.textContent = "Track ended";
-        });
-    </script>
+
+        const bassAvg = dataArray.slice(0, 10).reduce((a, b) => a + b, 0) / 10;
+        const scale = 1 + (bassAvg / 255) * 2;
+        sphere.scale.set(scale, scale, scale);
+        sprite.scale.set(30 * scale, 30 * scale, 1);
+        pointLight.intensity = 1.5 + (bassAvg / 255) * 0.5;
+      }
+
+      renderer.render(scene, camera);
+    }
+
+    window.onload = () => {
+      init();
+      loadTrack(trackSelect.value);
+    };
+
+    const addTrackBtn = document.getElementById("addTrackBtn");
+    const fileInput = document.getElementById("fileInput");
+
+    addTrackBtn.onclick = () => fileInput.click();
+    fileInput.onchange = (event) => {
+      const file = event.target.files[0];
+      if (file) {
+        const url = URL.createObjectURL(file);
+        const option = document.createElement("option");
+        option.textContent = file.name;
+        option.value = url;
+        trackSelect.appendChild(option);
+        trackSelect.value = url;
+        loadTrack(url);
+      }
+    };
+
+    playPauseBtn.onclick = () => {
+      if (audio.paused) {
+        audio.play();
+        playPauseBtn.textContent = '⏸';
+      } else {
+        audio.pause();
+        playPauseBtn.textContent = '▶';
+      }
+    };
+
+    trackSelect.onchange = () => loadTrack(trackSelect.value);
+    seekBar.addEventListener('input', () => seekBar.dragging = true);
+    seekBar.addEventListener('change', () => {
+      audio.currentTime = (seekBar.value / 100) * audio.duration;
+      seekBar.dragging = false;
+    });
+
+    audio.onended = () => playPauseBtn.textContent = '▶';
+  </script>
 </body>
 </html>
