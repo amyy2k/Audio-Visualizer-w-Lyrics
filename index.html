@@ -1,276 +1,497 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Wireframe Audio Visualizer</title>
-  <link href="https://fonts.googleapis.com/css2?family=Quantico&display=swap" rel="stylesheet">
-  <style>
-    body {
-      margin: 0;
-      overflow: hidden;
-      background: black;
-      font-family: 'Quantico', sans-serif;
-      color: white;
-      letter-spacing: 1px;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wireframe Audio Visualizer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Quantico&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: black;
+            font-family: 'Quantico', sans-serif;
+            color: white;
+            letter-spacing: 1px;
+        }
 
-    #controls {
-      position: fixed;
-      top: 10px;
-      left: 10px;
-      z-index: 10;
-      display: flex;
-      gap: 10px;
-      align-items: center;
-    }
+        #controls {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            z-index: 10;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            background: rgba(0,0,0,0.3);
+            padding: 10px;
+            border: 1px solid rgba(255,255,255,0.8);
+            border-radius: 5px;
+            backdrop-filter: blur(10px);
+        }
 
-    #addTrackBtn,
-    #playPauseBtn {
-      background: black;
-      color: white;
-      border: 1px solid white;
-      padding: 6px 12px;
-      font-size: 16px;
-      cursor: pointer;
-    }
+        #themeSelect,
+        #trackSelect,
+        #addTrackBtn,
+        #playPauseBtn {
+            background: black;
+            color: white;
+            border: 1px solid white;
+            padding: 6px 12px;
+            font-size: 16px;
+            cursor: pointer;
+            font-family: 'Quantico', sans-serif;
+        }
 
-    #addTrackBtn {
-      font-size: 22px;
-      padding: 4px 12px;
-    }
+        #addTrackBtn {
+            font-size: 22px;
+            padding: 4px 12px;
+        }
 
-    #trackSelect {
-      background: black;
-      color: white;
-      border: 1px solid white;
-      padding: 6px 8px;
-      font-family: 'Quantico', sans-serif;
-    }
+        #addTrackBtn:hover,
+        #playPauseBtn:hover,
+        #themeSelect:hover,
+        #trackSelect:hover {
+            background: #333;
+        }
 
-    #seekBar {
-      width: 200px;
-      height: 6px;
-      appearance: none;
-      background: white;
-      cursor: pointer;
-    }
+        #seekBar {
+            width: 200px;
+            height: 6px;
+            appearance: none;
+            background: white;
+            cursor: pointer;
+        }
 
-    #seekBar::-webkit-slider-thumb,
-    #seekBar::-moz-range-thumb {
-      height: 14px;
-      width: 14px;
-      background: white;
-      border-radius: 50%;
-      border: none;
-    }
-  </style>
+        #seekBar::-webkit-slider-thumb,
+        #seekBar::-moz-range-thumb {
+            height: 14px;
+            width: 14px;
+            background: white;
+            border-radius: 50%;
+            border: none;
+        }
+
+        #fileInput {
+            display: none;
+        }
+    </style>
 </head>
 <body>
-  <div id="controls">
-    <button id="addTrackBtn">+</button>
-    <select id="trackSelect">
-      <option value="Cynthoni - Dork After Dark.mp3">Cynthoni - Dork After Dark</option>
-      <option value="Cynthoni - Lychee Ice.mp3">Cynthoni - Lychee Ice</option>
-      <option value="Joji - Die For You.mp3">Joji - Die For You</option>
-      <option value="Porter Robinson - Sad Machine.mp3">Porter Robinson - Sad Machine</option>
-      <option value="Radiohead - All I Need.mp3">Radiohead - All I Need</option>
-    </select>
-    <button id="playPauseBtn">▶</button>
-    <input type="range" id="seekBar" value="0" min="0" max="100" step="0.1">
-    <input type="file" id="fileInput" accept="audio/*" style="display: none;">
-  </div>
+    <div id="controls">
+        <select id="themeSelect">
+            <option value="blackwhite" selected>Black & White</option>
+            <option value="beach">Beach Sunset</option>
+            <option value="vaporwave">Vaporwave</option>
+            <option value="cyberpunk">Cyberpunk</option>
+            <option value="forest">Forest</option>
+            <option value="fire">Fire</option>
+            <option value="aurora">Northern Lights</option>
+        </select>
+        
+        <button id="addTrackBtn">+</button>
+        
+        <select id="trackSelect">
+            <option value="">Choose a track...</option>
+            <option value="./Cynthoni - Dork After Dark.mp3">Cynthoni - Dork After Dark</option>
+            <option value="./Cynthoni - Lychee Ice.mp3">Cynthoni - Lychee Ice</option>
+            <option value="./Joji - Die For You.mp3">Joji - Die For You</option>
+            <option value="./Porter Robinson - Sad Machine.mp3">Porter Robinson - Sad Machine</option>
+            <option value="./Radiohead - All I Need.mp3">Radiohead - All I Need</option>
+        </select>
+        
+        <button id="playPauseBtn">▶</button>
+        <input type="range" id="seekBar" value="0" min="0" max="100" step="0.1">
+        <input type="file" id="fileInput" accept="audio/*">
+    </div>
 
-  <audio id="audio"></audio>
+    <audio id="audio"></audio>
 
-  <script type="importmap">
-    {
-      "imports": {
-        "three": "https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.module.js"
-      }
-    }
-  </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Global variables
+        let scene, camera, renderer, terrain, sun;
+        let audioContext, analyser, audioSource, dataArray;
+        let isPlaying = false;
+        let currentTrack = null;
+        let currentTheme = 'blackwhite';
 
-  <script type="module">
-    import * as THREE from 'three';
+        // Theme definitions
+        const themes = {
+            blackwhite: {
+                name: 'Black & White',
+                sky: '#000000',
+                terrain: 0xffffff,
+                sun: 0xffffff,
+                sunGlow: [0xffffff, 0xffffff, 0xffffff, 0xffffff],
+                light: 0xffffff
+            },
+            beach: {
+                name: 'Beach Sunset',
+                sky: '#ff6b35',
+                terrain: 0x0077be,
+                sun: 0xffa500,
+                sunGlow: [0xffb347, 0xff8c42, 0xff6b35, 0xff5722],
+                light: 0xffa500
+            },
+            vaporwave: {
+                name: 'Vaporwave',
+                sky: '#ff006e',
+                terrain: 0xff10f0,
+                sun: 0xffffff,
+                sunGlow: [0xff10f0, 0x00ffff, 0xff006e, 0x8338ec],
+                light: 0xff10f0
+            },
+            cyberpunk: {
+                name: 'Cyberpunk',
+                sky: '#0a0a0a',
+                terrain: 0x00ffff,
+                sun: 0x00ff00,
+                sunGlow: [0x00ffff, 0x00ff00, 0x39ff14, 0x0080ff],
+                light: 0x00ff00
+            },
+            forest: {
+                name: 'Forest',
+                sky: '#2d5016',
+                terrain: 0x228b22,
+                sun: 0xffd700,
+                sunGlow: [0xffd700, 0xffa500, 0xff8c00, 0xff6347],
+                light: 0xffd700
+            },
+            fire: {
+                name: 'Fire',
+                sky: '#8b0000',
+                terrain: 0xff4500,
+                sun: 0xffff00,
+                sunGlow: [0xffff00, 0xffa500, 0xff4500, 0xdc143c],
+                light: 0xff4500
+            },
+            aurora: {
+                name: 'Northern Lights',
+                sky: '#000428',
+                terrain: 0x40e0d0,
+                sun: 0x9370db,
+                sunGlow: [0x9370db, 0x8a2be2, 0x4b0082, 0x6a5acd],
+                light: 0x9370db
+            }
+        };
 
-    let scene, camera, renderer, terrain, analyser, dataArray;
-    let sphere, sprite, pointLight;
+        // UI elements
+        const audio = document.getElementById('audio');
+        const themeSelect = document.getElementById('themeSelect');
+        const trackSelect = document.getElementById('trackSelect');
+        const addTrackBtn = document.getElementById('addTrackBtn');
+        const fileInput = document.getElementById('fileInput');
+        const playPauseBtn = document.getElementById('playPauseBtn');
+        const seekBar = document.getElementById('seekBar');
 
+        // Terrain settings
+        const cols = 64, rows = 64, terrainWidth = 300, terrainDepth = 800;
 
-    const audio = document.getElementById('audio');
-    const playPauseBtn = document.getElementById("playPauseBtn");
-    const trackSelect = document.getElementById("trackSelect");
-    const seekBar = document.getElementById("seekBar");
+        function initScene() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 10, 100);
+            camera.lookAt(0, 50, 0);
 
-    const cols = 64, rows = 64, terrainWidth = 300, terrainDepth = 800;
-    const geometry = new THREE.PlaneGeometry(terrainWidth, terrainDepth, cols - 1, rows - 1);
-    geometry.rotateX(-Math.PI / 2);
-    const terrainMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true });
-    terrain = new THREE.Mesh(geometry, terrainMaterial);
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setClearColor(themes[currentTheme].sky);
+            document.body.appendChild(renderer.domElement);
 
-    function createFeatheredGlowTexture() {
-      const size = 256;
-      const canvas = document.createElement('canvas');
-      canvas.width = canvas.height = size;
-      const ctx = canvas.getContext('2d');
-
-      const gradient = ctx.createRadialGradient(
-        size / 2, size / 2, 10,
-        size / 2, size / 2, size / 2
-      );
-      gradient.addColorStop(0, 'rgba(255,255,255,0.5)');
-      gradient.addColorStop(0.6, 'rgba(255,255,255,0.1)');
-      gradient.addColorStop(1, 'rgba(255,255,255,0)');
-
-      ctx.fillStyle = gradient;
-      ctx.fillRect(0, 0, size, size);
-
-      return new THREE.CanvasTexture(canvas);
-    }
-
-    function init() {
-      scene = new THREE.Scene();
-      camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-      camera.position.set(0, 10, 100);
-      camera.lookAt(0, 50, 0);
-
-      renderer = new THREE.WebGLRenderer({ antialias: true });
-      renderer.setSize(window.innerWidth, window.innerHeight);
-      document.body.appendChild(renderer.domElement);
-
-      scene.add(terrain);
-
-// Core sphere (bright light center)
-const sphereGeometry = new THREE.SphereGeometry(6, 64, 64);
-const sphereMaterial = new THREE.MeshStandardMaterial({
-  color: 0xffffff,
-  emissive: 0xffffff,
-  emissiveIntensity: 3,
-  roughness: 0.2,
-  metalness: 0.1
-});
-sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
-sphere.position.set(0, 90, 0);
-scene.add(sphere);
-
-// Sprite-based glow (facing camera, soft bloom)
-const spriteMap = new THREE.TextureLoader().load('https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/sprites/glow.png');
-const spriteMaterial = new THREE.SpriteMaterial({
-  map: spriteMap,
-  color: 0x00ffff,
-  transparent: true,
-  blending: THREE.AdditiveBlending
-});
-const sprite = new THREE.Sprite(spriteMaterial);
-sprite.scale.set(30, 30, 1); // Adjust size to match the glow you want
-sprite.position.copy(sphere.position);
-scene.add(sprite);
-
-// Point light for realistic illumination
-const pointLight = new THREE.PointLight(0x00ffff, 2.5, 200);
-pointLight.position.copy(sphere.position);
-scene.add(pointLight);
-
-
-      animate();
-    }
-
-    function loadTrack(filename) {
-      audio.src = filename;
-      audio.load();
-      audio.play();
-      playPauseBtn.textContent = '⏸';
-
-      const audioCtx = new AudioContext();
-      const source = audioCtx.createMediaElementSource(audio);
-      analyser = audioCtx.createAnalyser();
-      analyser.fftSize = 256;
-      dataArray = new Uint8Array(analyser.frequencyBinCount);
-
-      source.connect(analyser);
-      analyser.connect(audioCtx.destination);
-    }
-
-    function animate() {
-      requestAnimationFrame(animate);
-
-      if (analyser && dataArray) {
-        analyser.getByteFrequencyData(dataArray);
-        const pos = terrain.geometry.attributes.position;
-        const halfCols = Math.floor(cols / 2);
-
-        for (let z = rows - 1; z > 0; z--) {
-          for (let x = 0; x < cols; x++) {
-            const i = z * cols + x;
-            const prev = (z - 1) * cols + x;
-            pos.array[i * 3 + 1] = pos.array[prev * 3 + 1];
-          }
+            createTerrain();
+            createSun();
+            
+            animate();
         }
 
-        for (let x = 0; x < cols; x++) {
-          const i = x;
-          const mirrorIndex = x < halfCols ? x : cols - x - 1;
-          const bin = Math.floor((mirrorIndex / halfCols) * dataArray.length);
-          const magnitude = dataArray[Math.min(bin, dataArray.length - 1)] / 255;
-          pos.array[i * 3 + 1] = magnitude * 60;
+        function createTerrain() {
+            const geometry = new THREE.PlaneGeometry(terrainWidth, terrainDepth, cols - 1, rows - 1);
+            geometry.rotateX(-Math.PI / 2);
+            
+            // Initialize with flat terrain
+            const positions = geometry.attributes.position;
+            for (let i = 0; i < positions.count; i++) {
+                positions.setY(i, 0);
+            }
+            
+            const terrainMaterial = new THREE.MeshBasicMaterial({ 
+                color: themes[currentTheme].terrain, 
+                wireframe: true 
+            });
+            terrain = new THREE.Mesh(geometry, terrainMaterial);
+            scene.add(terrain);
         }
 
-        pos.needsUpdate = true;
+        function createSun() {
+            // Core sun sphere - smaller size
+            const sphereGeometry = new THREE.SphereGeometry(6, 64, 64);
+            const sphereMaterial = new THREE.MeshBasicMaterial({
+                color: themes[currentTheme].sun
+            });
+            sun = new THREE.Mesh(sphereGeometry, sphereMaterial);
+            sun.position.set(0, 90, 0);
+            scene.add(sun);
 
-        if (!seekBar.dragging && audio.duration) {
-          seekBar.value = (audio.currentTime / audio.duration) * 100;
+            // Glow layers
+            for (let i = 1; i <= 4; i++) {
+                const glowGeometry = new THREE.SphereGeometry(6 + (i * 8), 32, 32);
+                const glowMaterial = new THREE.MeshBasicMaterial({
+                    color: themes[currentTheme].sunGlow[i - 1],
+                    transparent: true,
+                    opacity: 0.15 / i
+                });
+                
+                const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+                glow.position.copy(sun.position);
+                scene.add(glow);
+                
+                if (!sun.glows) sun.glows = [];
+                sun.glows.push(glow);
+            }
+
+            // Point light
+            const light = new THREE.PointLight(themes[currentTheme].light, 2.5, 200);
+            light.position.copy(sun.position);
+            scene.add(light);
+            sun.light = light;
         }
 
-        const bassAvg = dataArray.slice(0, 10).reduce((a, b) => a + b, 0) / 10;
-        const scale = 1 + (bassAvg / 255) * 2;
-        sphere.scale.set(scale, scale, scale);
-        sprite.scale.set(30 * scale, 30 * scale, 1);
-        pointLight.intensity = 1.5 + (bassAvg / 255) * 0.5;
-      }
+        function applyTheme(themeName) {
+            currentTheme = themeName;
+            
+            // Update background
+            renderer.setClearColor(themes[currentTheme].sky);
+            
+            // Update terrain color
+            if (terrain) {
+                terrain.material.color.setHex(themes[currentTheme].terrain);
+            }
+            
+            // Update sun and glow colors
+            if (sun) {
+                sun.material.color.setHex(themes[currentTheme].sun);
+                
+                if (sun.glows) {
+                    sun.glows.forEach((glow, index) => {
+                        glow.material.color.setHex(themes[currentTheme].sunGlow[index]);
+                    });
+                }
+                
+                if (sun.light) {
+                    sun.light.color.setHex(themes[currentTheme].light);
+                }
+            }
+        }
 
-      renderer.render(scene, camera);
-    }
+        // Audio functions
+        async function initAudio() {
+            try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                
+                if (audioContext.state === 'suspended') {
+                    await audioContext.resume();
+                }
+                
+                analyser = audioContext.createAnalyser();
+                analyser.fftSize = 256;
+                dataArray = new Uint8Array(analyser.frequencyBinCount);
+                
+                return true;
+            } catch (error) {
+                console.error('Audio context error:', error);
+                return false;
+            }
+        }
 
-    window.onload = () => {
-      init();
-      loadTrack(trackSelect.value);
-    };
+        async function setupAudioSource() {
+            if (audioSource) {
+                audioSource.disconnect();
+            }
+            
+            try {
+                audioSource = audioContext.createMediaElementSource(audio);
+                audioSource.connect(analyser);
+                analyser.connect(audioContext.destination);
+                return true;
+            } catch (error) {
+                try {
+                    audioSource.connect(analyser);
+                    analyser.connect(audioContext.destination);
+                    return true;
+                } catch (reconnectError) {
+                    console.error('Audio source setup failed:', error);
+                    return false;
+                }
+            }
+        }
 
-    const addTrackBtn = document.getElementById("addTrackBtn");
-    const fileInput = document.getElementById("fileInput");
+        async function loadTrack(src) {
+            if (!audioContext) {
+                await initAudio();
+            }
+            
+            audio.src = src;
+            audio.load();
+            
+            await setupAudioSource();
+            currentTrack = src;
+        }
 
-    addTrackBtn.onclick = () => fileInput.click();
-    fileInput.onchange = (event) => {
-      const file = event.target.files[0];
-      if (file) {
-        const url = URL.createObjectURL(file);
-        const option = document.createElement("option");
-        option.textContent = file.name;
-        option.value = url;
-        trackSelect.appendChild(option);
-        trackSelect.value = url;
-        loadTrack(url);
-      }
-    };
+        async function togglePlay() {
+            if (!currentTrack) return;
+            
+            try {
+                if (audioContext.state === 'suspended') {
+                    await audioContext.resume();
+                }
+                
+                if (audio.paused) {
+                    await audio.play();
+                    playPauseBtn.textContent = '⏸';
+                    isPlaying = true;
+                } else {
+                    audio.pause();
+                    playPauseBtn.textContent = '▶';
+                    isPlaying = false;
+                }
+            } catch (error) {
+                console.error('Playback error:', error);
+            }
+        }
 
-    playPauseBtn.onclick = () => {
-      if (audio.paused) {
-        audio.play();
-        playPauseBtn.textContent = '⏸';
-      } else {
-        audio.pause();
-        playPauseBtn.textContent = '▶';
-      }
-    };
+        function animate() {
+            requestAnimationFrame(animate);
 
-    trackSelect.onchange = () => loadTrack(trackSelect.value);
-    seekBar.addEventListener('input', () => seekBar.dragging = true);
-    seekBar.addEventListener('change', () => {
-      audio.currentTime = (seekBar.value / 100) * audio.duration;
-      seekBar.dragging = false;
-    });
+            if (isPlaying && analyser && dataArray) {
+                analyser.getByteFrequencyData(dataArray);
+                
+                const hasData = dataArray.some(value => value > 0);
+                if (hasData) {
+                    updateVisualization();
+                }
+            } else {
+                // Keep terrain flat when not playing
+                const positions = terrain.geometry.attributes.position;
+                for (let i = 0; i < positions.count; i++) {
+                    positions.setY(i, 0);
+                }
+                positions.needsUpdate = true;
+            }
 
-    audio.onended = () => playPauseBtn.textContent = '▶';
-  </script>
+            // Update seek bar
+            if (!seekBar.dragging && audio.duration && isPlaying) {
+                seekBar.value = (audio.currentTime / audio.duration) * 100;
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        function updateVisualization() {
+            const pos = terrain.geometry.attributes.position;
+            const halfCols = Math.floor(cols / 2);
+
+            // Shift all terrain data backward (rolling effect)
+            for (let z = rows - 1; z > 0; z--) {
+                for (let x = 0; x < cols; x++) {
+                    const i = z * cols + x;
+                    const prev = (z - 1) * cols + x;
+                    pos.array[i * 3 + 1] = pos.array[prev * 3 + 1];
+                }
+            }
+
+            // Add new frequency data to the front row
+            for (let x = 0; x < cols; x++) {
+                const i = x;
+                const mirrorIndex = x < halfCols ? x : cols - x - 1;
+                const bin = Math.floor((mirrorIndex / halfCols) * dataArray.length);
+                const magnitude = dataArray[Math.min(bin, dataArray.length - 1)] / 255;
+                pos.array[i * 3 + 1] = magnitude * 60;
+            }
+
+            pos.needsUpdate = true;
+
+            // Bass-reactive sun
+            const bassData = dataArray.slice(0, 5);
+            const bassAverage = bassData.reduce((a, b) => a + b, 0) / bassData.length;
+            const bassIntensity = bassAverage / 255;
+            
+            // Sun scaling - reduced maximum size
+            const scale = 1 + (bassIntensity * 0.8);
+            sun.scale.set(scale, scale, scale);
+            
+            // Update glow layers
+            if (sun.glows) {
+                sun.glows.forEach((glow, index) => {
+                    const glowScale = scale + (index * 0.15);
+                    glow.scale.set(glowScale, glowScale, glowScale);
+                    glow.material.opacity = (0.15 / (index + 1)) * (1 + bassIntensity * 2);
+                });
+            }
+            
+            // Update light intensity
+            if (sun.light) {
+                sun.light.intensity = 2.5 + (bassIntensity * 3);
+            }
+        }
+
+        // Event listeners
+        themeSelect.addEventListener('change', (e) => {
+            applyTheme(e.target.value);
+        });
+
+        trackSelect.addEventListener('change', (e) => {
+            if (e.target.value) {
+                loadTrack(e.target.value);
+            }
+        });
+
+        addTrackBtn.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const url = URL.createObjectURL(file);
+                const option = document.createElement('option');
+                option.value = url;
+                option.textContent = file.name;
+                trackSelect.appendChild(option);
+                trackSelect.value = url;
+                loadTrack(url);
+            }
+        });
+
+        playPauseBtn.addEventListener('click', togglePlay);
+
+        seekBar.addEventListener('input', () => {
+            seekBar.dragging = true;
+        });
+
+        seekBar.addEventListener('change', () => {
+            if (audio.duration) {
+                audio.currentTime = (seekBar.value / 100) * audio.duration;
+            }
+            seekBar.dragging = false;
+        });
+
+        audio.addEventListener('ended', () => {
+            playPauseBtn.textContent = '▶';
+            isPlaying = false;
+        });
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Initialize when page loads
+        window.addEventListener('load', () => {
+            initScene();
+        });
+    </script>
 </body>
 </html>
