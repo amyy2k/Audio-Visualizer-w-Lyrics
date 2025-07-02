@@ -36,7 +36,7 @@
         #playPauseBtn {
             background: black;
             color: white;
-            border: 1px solid white;
+            border: none;
             padding: 6px 12px;
             font-size: 16px;
             cursor: pointer;
@@ -225,67 +225,61 @@
         }
 
         function createSun() {
-            // Core sun sphere - glowing material
-            const sphereGeometry = new THREE.SphereGeometry(6, 64, 64);
+            // Core sun sphere with emissive glow
+            const sphereGeometry = new THREE.SphereGeometry(8, 64, 64);
             const sphereMaterial = new THREE.MeshBasicMaterial({
                 color: themes[currentTheme].sun,
-                transparent: true,
-                opacity: 0.9
+                transparent: false,
+                opacity: 1.0
             });
             sun = new THREE.Mesh(sphereGeometry, sphereMaterial);
             sun.position.set(0, 90, 0);
             scene.add(sun);
 
-            // Create multiple glow layers for realistic orb effect
-            const glowSizes = [12, 18, 25, 35, 50]; // Different glow layer sizes
-            const glowOpacities = [0.4, 0.25, 0.15, 0.08, 0.04]; // Decreasing opacity
+            // Single unified glow sphere using additive blending
+            const glowGeometry = new THREE.SphereGeometry(16, 32, 32);
+            const glowMaterial = new THREE.MeshBasicMaterial({
+                color: themes[currentTheme].sun,
+                transparent: true,
+                opacity: 0.3,
+                blending: THREE.AdditiveBlending
+            });
             
-            for (let i = 0; i < glowSizes.length; i++) {
-                const glowGeometry = new THREE.SphereGeometry(glowSizes[i], 32, 32);
-                const glowMaterial = new THREE.MeshBasicMaterial({
-                    color: themes[currentTheme].sunGlow[Math.min(i, themes[currentTheme].sunGlow.length - 1)],
-                    transparent: true,
-                    opacity: glowOpacities[i],
-                    blending: THREE.AdditiveBlending
-                });
-                
-                const glow = new THREE.Mesh(glowGeometry, glowMaterial);
-                glow.position.copy(sun.position);
-                scene.add(glow);
-                
-                if (!sun.glows) sun.glows = [];
-                sun.glows.push(glow);
-            }
+            const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+            glow.position.copy(sun.position);
+            scene.add(glow);
+            sun.glow = glow;
 
-            // Add sprite-based outer glow for extra ethereal effect
+            // Sprite for soft outer glow effect
             const canvas = document.createElement('canvas');
-            canvas.width = canvas.height = 128;
+            canvas.width = canvas.height = 256;
             const ctx = canvas.getContext('2d');
             
-            const gradient = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
-            gradient.addColorStop(0, 'rgba(255,255,255,1)');
-            gradient.addColorStop(0.3, 'rgba(255,255,255,0.6)');
-            gradient.addColorStop(0.7, 'rgba(255,255,255,0.2)');
+            // Create radial gradient for smooth glow
+            const gradient = ctx.createRadialGradient(128, 128, 0, 128, 128, 128);
+            gradient.addColorStop(0, 'rgba(255,255,255,0.8)');
+            gradient.addColorStop(0.4, 'rgba(255,255,255,0.4)');
+            gradient.addColorStop(0.7, 'rgba(255,255,255,0.1)');
             gradient.addColorStop(1, 'rgba(255,255,255,0)');
             
             ctx.fillStyle = gradient;
-            ctx.fillRect(0, 0, 128, 128);
+            ctx.fillRect(0, 0, 256, 256);
             
             const glowTexture = new THREE.CanvasTexture(canvas);
             const spriteMaterial = new THREE.SpriteMaterial({
                 map: glowTexture,
                 transparent: true,
                 blending: THREE.AdditiveBlending,
-                opacity: 0.6
+                opacity: 0.5
             });
             
             const sprite = new THREE.Sprite(spriteMaterial);
-            sprite.scale.set(80, 80, 1);
+            sprite.scale.set(40, 40, 1);
             sprite.position.copy(sun.position);
             scene.add(sprite);
             sun.sprite = sprite;
 
-            // Point light with larger radius
+            // Point light for scene illumination
             const light = new THREE.PointLight(themes[currentTheme].light, 3, 300);
             light.position.copy(sun.position);
             scene.add(light);
@@ -307,15 +301,13 @@
             if (sun) {
                 sun.material.color.setHex(themes[currentTheme].sun);
                 
-                if (sun.glows) {
-                    sun.glows.forEach((glow, index) => {
-                        const colorIndex = Math.min(index, themes[currentTheme].sunGlow.length - 1);
-                        glow.material.color.setHex(themes[currentTheme].sunGlow[colorIndex]);
-                    });
+                // Update single glow layer
+                if (sun.glow) {
+                    sun.glow.material.color.setHex(themes[currentTheme].sun);
                 }
                 
+                // Update sprite color
                 if (sun.sprite) {
-                    // Sprite color is controlled by the texture, but we can adjust opacity based on theme
                     const themeColor = new THREE.Color(themes[currentTheme].sun);
                     sun.sprite.material.color.copy(themeColor);
                 }
@@ -462,16 +454,13 @@
                 const newScale = currentScale + (targetScale - currentScale) * 0.1;
                 sun.scale.set(newScale, newScale, newScale);
                 
-                // Reduce glow opacity during decay
-                if (sun.glows) {
-                    sun.glows.forEach((glow, index) => {
-                        const baseOpacity = [0.4, 0.25, 0.15, 0.08, 0.04][index] || 0.04;
-                        glow.material.opacity = baseOpacity * terrainDecay;
-                    });
+                // Reduce single glow opacity during decay
+                if (sun.glow) {
+                    sun.glow.material.opacity = 0.3 * terrainDecay;
                 }
                 
                 if (sun.sprite) {
-                    sun.sprite.material.opacity = 0.6 * terrainDecay;
+                    sun.sprite.material.opacity = 0.5 * terrainDecay;
                 }
                 
                 if (sun.light) {
@@ -504,38 +493,34 @@
 
             pos.needsUpdate = true;
 
-            // Bass-reactive glowing orb
+            // Bass-reactive glowing orb with limited scaling
             const bassData = dataArray.slice(0, 5);
             const bassAverage = bassData.reduce((a, b) => a + b, 0) / bassData.length;
             const bassIntensity = bassAverage / 255;
             
-            // Sun scaling - reduced maximum size but more responsive
-            const scale = 1 + (bassIntensity * 0.6);
+            // Limited scaling - maximum 50% larger (1.5x)
+            const scale = 1 + (bassIntensity * 0.5);
             sun.scale.set(scale, scale, scale);
             
-            // Update glow layers with more dramatic effects
-            if (sun.glows) {
-                const baseOpacities = [0.4, 0.25, 0.15, 0.08, 0.04];
-                sun.glows.forEach((glow, index) => {
-                    const glowScale = scale + (index * 0.1);
-                    glow.scale.set(glowScale, glowScale, glowScale);
-                    
-                    // More dramatic opacity changes based on bass
-                    const baseOpacity = baseOpacities[index] || 0.04;
-                    glow.material.opacity = baseOpacity * (1 + bassIntensity * 3);
-                });
+            // Update single glow layer
+            if (sun.glow) {
+                const glowScale = scale * 1.1; // Slightly larger than core
+                sun.glow.scale.set(glowScale, glowScale, glowScale);
+                
+                // Adjust glow opacity based on bass
+                sun.glow.material.opacity = 0.3 + (bassIntensity * 0.4);
             }
             
             // Update sprite glow
             if (sun.sprite) {
                 const spriteScale = scale * 1.2;
-                sun.sprite.scale.set(80 * spriteScale, 80 * spriteScale, 1);
-                sun.sprite.material.opacity = 0.6 * (1 + bassIntensity * 0.8);
+                sun.sprite.scale.set(40 * spriteScale, 40 * spriteScale, 1);
+                sun.sprite.material.opacity = 0.5 + (bassIntensity * 0.3);
             }
             
-            // Update light intensity with stronger bass reaction
+            // Update light intensity
             if (sun.light) {
-                sun.light.intensity = 3 + (bassIntensity * 5);
+                sun.light.intensity = 3 + (bassIntensity * 3);
             }
         }
 
