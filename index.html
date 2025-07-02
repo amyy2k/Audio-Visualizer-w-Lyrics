@@ -224,63 +224,57 @@
             scene.add(terrain);
         }
 
+        function createGlowTexture() {
+            const size = 256;
+            const canvas = document.createElement('canvas');
+            canvas.width = canvas.height = size;
+            const ctx = canvas.getContext('2d');
+
+            const gradient = ctx.createRadialGradient(
+                size / 2, size / 2, 10,
+                size / 2, size / 2, size / 2
+            );
+            gradient.addColorStop(0, 'rgba(255,255,255,0.8)');
+            gradient.addColorStop(0.4, 'rgba(255,255,255,0.4)');
+            gradient.addColorStop(0.7, 'rgba(255,255,255,0.1)');
+            gradient.addColorStop(1, 'rgba(255,255,255,0)');
+
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, size, size);
+
+            return new THREE.CanvasTexture(canvas);
+        }
+
         function createSun() {
-            // Core sun sphere with emissive glow
-            const sphereGeometry = new THREE.SphereGeometry(8, 64, 64);
-            const sphereMaterial = new THREE.MeshBasicMaterial({
-                color: themes[currentTheme].sun,
-                transparent: false,
-                opacity: 1.0
+            // Core sphere with emissive material - exactly like your code
+            const sphereGeometry = new THREE.SphereGeometry(6, 64, 64);
+            const sphereMaterial = new THREE.MeshStandardMaterial({
+                color: 0xffffff,
+                emissive: 0xffffff,
+                emissiveIntensity: 3,
+                roughness: 0.2,
+                metalness: 0.1
             });
             sun = new THREE.Mesh(sphereGeometry, sphereMaterial);
             sun.position.set(0, 90, 0);
             scene.add(sun);
 
-            // Single unified glow sphere using additive blending
-            const glowGeometry = new THREE.SphereGeometry(16, 32, 32);
-            const glowMaterial = new THREE.MeshBasicMaterial({
-                color: themes[currentTheme].sun,
+            // Sprite-based glow - exactly like your code
+            const spriteMap = createGlowTexture();
+            const spriteMaterial = new THREE.SpriteMaterial({
+                map: spriteMap,
+                color: themes[currentTheme].sun === 0xffffff ? 0x00ffff : themes[currentTheme].sun, // Cyan for white themes
                 transparent: true,
-                opacity: 0.3,
                 blending: THREE.AdditiveBlending
             });
-            
-            const glow = new THREE.Mesh(glowGeometry, glowMaterial);
-            glow.position.copy(sun.position);
-            scene.add(glow);
-            sun.glow = glow;
-
-            // Sprite for soft outer glow effect
-            const canvas = document.createElement('canvas');
-            canvas.width = canvas.height = 256;
-            const ctx = canvas.getContext('2d');
-            
-            // Create radial gradient for smooth glow
-            const gradient = ctx.createRadialGradient(128, 128, 0, 128, 128, 128);
-            gradient.addColorStop(0, 'rgba(255,255,255,0.8)');
-            gradient.addColorStop(0.4, 'rgba(255,255,255,0.4)');
-            gradient.addColorStop(0.7, 'rgba(255,255,255,0.1)');
-            gradient.addColorStop(1, 'rgba(255,255,255,0)');
-            
-            ctx.fillStyle = gradient;
-            ctx.fillRect(0, 0, 256, 256);
-            
-            const glowTexture = new THREE.CanvasTexture(canvas);
-            const spriteMaterial = new THREE.SpriteMaterial({
-                map: glowTexture,
-                transparent: true,
-                blending: THREE.AdditiveBlending,
-                opacity: 0.5
-            });
-            
             const sprite = new THREE.Sprite(spriteMaterial);
-            sprite.scale.set(40, 40, 1);
+            sprite.scale.set(30, 30, 1);
             sprite.position.copy(sun.position);
             scene.add(sprite);
             sun.sprite = sprite;
 
             // Point light for scene illumination
-            const light = new THREE.PointLight(themes[currentTheme].light, 3, 300);
+            const light = new THREE.PointLight(themes[currentTheme].light, 2.5, 200);
             light.position.copy(sun.position);
             scene.add(light);
             sun.light = light;
@@ -299,17 +293,19 @@
             
             // Update sun and glow colors
             if (sun) {
-                sun.material.color.setHex(themes[currentTheme].sun);
+                // Keep core always white but adjust emissive intensity
+                sun.material.color.setHex(0xffffff);
+                sun.material.emissive.setHex(0xffffff);
                 
-                // Update single glow layer
-                if (sun.glow) {
-                    sun.glow.material.color.setHex(themes[currentTheme].sun);
-                }
-                
-                // Update sprite color
+                // Update sprite color based on theme
                 if (sun.sprite) {
-                    const themeColor = new THREE.Color(themes[currentTheme].sun);
-                    sun.sprite.material.color.copy(themeColor);
+                    if (themes[currentTheme].sun === 0xffffff) {
+                        // For white themes, use cyan glow
+                        sun.sprite.material.color.setHex(0x00ffff);
+                    } else {
+                        // For other themes, use the theme's sun color
+                        sun.sprite.material.color.setHex(themes[currentTheme].sun);
+                    }
                 }
                 
                 if (sun.light) {
@@ -454,17 +450,16 @@
                 const newScale = currentScale + (targetScale - currentScale) * 0.1;
                 sun.scale.set(newScale, newScale, newScale);
                 
-                // Reduce single glow opacity during decay
-                if (sun.glow) {
-                    sun.glow.material.opacity = 0.3 * terrainDecay;
-                }
+                // Reduce emissive intensity during decay
+                sun.material.emissiveIntensity = 3 + (3 * terrainDecay);
                 
+                // Reduce sprite scale during decay
                 if (sun.sprite) {
-                    sun.sprite.material.opacity = 0.5 * terrainDecay;
+                    sun.sprite.scale.set(30, 30, 1);
                 }
                 
                 if (sun.light) {
-                    sun.light.intensity = 3 * terrainDecay + 1; // Keep some base light
+                    sun.light.intensity = 2.5 * terrainDecay + 1; // Keep some base light
                 }
             }
         }
@@ -493,7 +488,7 @@
 
             pos.needsUpdate = true;
 
-            // Bass-reactive glowing orb with limited scaling
+            // Bass-reactive glowing orb with limited scaling (max 50% larger)
             const bassData = dataArray.slice(0, 5);
             const bassAverage = bassData.reduce((a, b) => a + b, 0) / bassData.length;
             const bassIntensity = bassAverage / 255;
@@ -502,25 +497,18 @@
             const scale = 1 + (bassIntensity * 0.5);
             sun.scale.set(scale, scale, scale);
             
-            // Update single glow layer
-            if (sun.glow) {
-                const glowScale = scale * 1.1; // Slightly larger than core
-                sun.glow.scale.set(glowScale, glowScale, glowScale);
-                
-                // Adjust glow opacity based on bass
-                sun.glow.material.opacity = 0.3 + (bassIntensity * 0.4);
-            }
+            // Increase emissive intensity with bass
+            sun.material.emissiveIntensity = 3 + (bassIntensity * 2);
             
             // Update sprite glow
             if (sun.sprite) {
-                const spriteScale = scale * 1.2;
-                sun.sprite.scale.set(40 * spriteScale, 40 * spriteScale, 1);
-                sun.sprite.material.opacity = 0.5 + (bassIntensity * 0.3);
+                const spriteScale = scale;
+                sun.sprite.scale.set(30 * spriteScale, 30 * spriteScale, 1);
             }
             
             // Update light intensity
             if (sun.light) {
-                sun.light.intensity = 3 + (bassIntensity * 3);
+                sun.light.intensity = 2.5 + (bassIntensity * 2);
             }
         }
 
