@@ -8,7 +8,7 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
         body {
-            background: linear-gradient(to bottom, #ff6b35, #ffa726);
+            background: linear-gradient(to bottom, #333, #666);
             color: #fff;
             font-family: 'Courier New', monospace;
             overflow: hidden;
@@ -22,7 +22,7 @@
             display: flex;
             gap: 15px;
             align-items: center;
-            background: rgba(255, 107, 53, 0.2);
+            background: rgba(0, 0, 0, 0.3);
             padding: 15px;
             border: 1px solid rgba(255, 255, 255, 0.8);
             border-radius: 10px;
@@ -39,7 +39,7 @@
         }
         
         button:hover, select:hover {
-            background: rgba(255, 140, 66, 0.4);
+            background: rgba(255, 255, 255, 0.2);
             border-color: #fff;
         }
         
@@ -59,7 +59,7 @@
             position: fixed;
             bottom: 20px;
             left: 20px;
-            background: rgba(255, 107, 53, 0.2);
+            background: rgba(0, 0, 0, 0.3);
             padding: 10px;
             border: 1px solid rgba(255, 255, 255, 0.8);
             border-radius: 10px;
@@ -73,6 +73,17 @@
 </head>
 <body>
     <div id="ui">
+        <label>Theme:</label>
+        <select id="themeSelect">
+            <option value="blackwhite">Black & White</option>
+            <option value="beach" selected>Beach Sunset</option>
+            <option value="vaporwave">Vaporwave</option>
+            <option value="cyberpunk">Cyberpunk</option>
+            <option value="forest">Forest</option>
+            <option value="fire">Fire</option>
+            <option value="aurora">Northern Lights</option>
+        </select>
+        
         <select id="trackSelect">
             <option value="">Choose a track...</option>
             <option value="./Cynthoni - Dork After Dark.mp3">Cynthoni - Dork After Dark</option>
@@ -91,7 +102,7 @@
         <input type="range" id="volume" min="0" max="100" value="50">
     </div>
     
-    <div id="status">Welcome to the beach - Click a track to begin</div>
+    <div id="status">Welcome to the themed audio visualizer - Select a theme and track</div>
     
     <audio id="audio"></audio>
 
@@ -102,9 +113,85 @@
         let audioContext, analyser, audioSource, dataArray;
         let isPlaying = false;
         let currentTrack = null;
+        let currentTheme = 'beach';
+        
+        // Theme definitions
+        const themes = {
+            blackwhite: {
+                name: 'Black & White',
+                sky: ['#000000', '#333333', '#666666', '#999999', '#cccccc'],
+                terrain: 0xffffff,
+                sun: 0xffffff,
+                sunGlow: [0xffffff, 0xffffff, 0xffffff, 0xffffff],
+                light: 0xffffff,
+                uiBackground: 'rgba(0,0,0,0.7)',
+                uiBorder: 'rgba(255,255,255,0.8)'
+            },
+            beach: {
+                name: 'Beach Sunset',
+                sky: ['#ff6b35', '#ff8c42', '#ffa726', '#ffb74d', '#ffe0b2'],
+                terrain: 0x0077be,
+                sun: 0xffa500,
+                sunGlow: [0xffb347, 0xff8c42, 0xff6b35, 0xff5722],
+                light: 0xffa500,
+                uiBackground: 'rgba(255, 107, 53, 0.2)',
+                uiBorder: 'rgba(255, 255, 255, 0.8)'
+            },
+            vaporwave: {
+                name: 'Vaporwave',
+                sky: ['#ff006e', '#fb5607', '#ffbe0b', '#8338ec', '#3a86ff'],
+                terrain: 0xff10f0,
+                sun: 0xffffff,
+                sunGlow: [0xff10f0, 0x00ffff, 0xff006e, 0x8338ec],
+                light: 0xff10f0,
+                uiBackground: 'rgba(255, 16, 240, 0.2)',
+                uiBorder: 'rgba(0, 255, 255, 0.8)'
+            },
+            cyberpunk: {
+                name: 'Cyberpunk',
+                sky: ['#0a0a0a', '#1a1a2e', '#16213e', '#0f3460', '#533483'],
+                terrain: 0x00ffff,
+                sun: 0x00ff00,
+                sunGlow: [0x00ffff, 0x00ff00, 0x39ff14, 0x0080ff],
+                light: 0x00ff00,
+                uiBackground: 'rgba(0, 255, 255, 0.2)',
+                uiBorder: 'rgba(0, 255, 0, 0.8)'
+            },
+            forest: {
+                name: 'Forest',
+                sky: ['#2d5016', '#3a5a40', '#a68b5b', '#d4a574', '#e9c46a'],
+                terrain: 0x228b22,
+                sun: 0xffd700,
+                sunGlow: [0xffd700, 0xffa500, 0xff8c00, 0xff6347],
+                light: 0xffd700,
+                uiBackground: 'rgba(45, 80, 22, 0.3)',
+                uiBorder: 'rgba(255, 215, 0, 0.8)'
+            },
+            fire: {
+                name: 'Fire',
+                sky: ['#8b0000', '#dc143c', '#ff4500', '#ff6347', '#ffa500'],
+                terrain: 0xff4500,
+                sun: 0xffff00,
+                sunGlow: [0xffff00, 0xffa500, 0xff4500, 0xdc143c],
+                light: 0xff4500,
+                uiBackground: 'rgba(139, 0, 0, 0.3)',
+                uiBorder: 'rgba(255, 255, 0, 0.8)'
+            },
+            aurora: {
+                name: 'Northern Lights',
+                sky: ['#000428', '#004e92', '#009ffd', '#00d2ff', '#ffffff'],
+                terrain: 0x40e0d0,
+                sun: 0x9370db,
+                sunGlow: [0x9370db, 0x8a2be2, 0x4b0082, 0x6a5acd],
+                light: 0x9370db,
+                uiBackground: 'rgba(0, 4, 40, 0.3)',
+                uiBorder: 'rgba(147, 112, 219, 0.8)'
+            }
+        };
         
         // UI elements
         const audio = document.getElementById('audio');
+        const themeSelect = document.getElementById('themeSelect');
         const trackSelect = document.getElementById('trackSelect');
         const uploadBtn = document.getElementById('uploadBtn');
         const fileInput = document.getElementById('fileInput');
@@ -120,8 +207,8 @@
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             
-            // Create sunset gradient background
-            createSunsetSky();
+            // Create themed background
+            createThemedSky();
             
             document.body.appendChild(renderer.domElement);
             
@@ -132,32 +219,34 @@
             // Create wireframe terrain
             createTerrain();
             
-            // Create sunset sun
+            // Create themed sun
             createSun();
             
             // Add atmospheric lighting
             createLighting();
             
+            // Apply initial theme to UI
+            applyThemeToUI();
+            
             // Start animation loop
             animate();
             
-            status.textContent = "Beach sunset scene initialized - Select a track";
+            status.textContent = `${themes[currentTheme].name} scene initialized - Select a track`;
         }
         
-        function createSunsetSky() {
-            // Create gradient background using canvas
+        function createThemedSky() {
             const canvas = document.createElement('canvas');
             canvas.width = 2;
             canvas.height = 256;
             const context = canvas.getContext('2d');
             
-            // Create sunset gradient
+            // Create gradient using current theme colors
             const gradient = context.createLinearGradient(0, 0, 0, 256);
-            gradient.addColorStop(0, '#ff6b35');    // Orange top
-            gradient.addColorStop(0.3, '#ff8c42');  // Orange-pink
-            gradient.addColorStop(0.6, '#ffa726');  // Yellow-orange
-            gradient.addColorStop(0.8, '#ffb74d');  // Light orange
-            gradient.addColorStop(1, '#ffe0b2');    // Pale orange bottom
+            const skyColors = themes[currentTheme].sky;
+            
+            skyColors.forEach((color, index) => {
+                gradient.addColorStop(index / (skyColors.length - 1), color);
+            });
             
             context.fillStyle = gradient;
             context.fillRect(0, 0, 2, 256);
@@ -167,40 +256,80 @@
             scene.background = texture;
         }
         
+        function applyTheme(themeName) {
+            currentTheme = themeName;
+            
+            if (scene) {
+                // Update sky
+                createThemedSky();
+                
+                // Update terrain color
+                if (terrain) {
+                    terrain.material.color.setHex(themes[currentTheme].terrain);
+                }
+                
+                // Update sun color
+                if (sun) {
+                    sun.material.color.setHex(themes[currentTheme].sun);
+                    
+                    // Update glow colors
+                    if (sun.glows) {
+                        sun.glows.forEach((glow, index) => {
+                            if (themes[currentTheme].sunGlow[index]) {
+                                glow.material.color.setHex(themes[currentTheme].sunGlow[index]);
+                            }
+                        });
+                    }
+                    
+                    // Update light color
+                    if (sun.light) {
+                        sun.light.color.setHex(themes[currentTheme].light);
+                    }
+                }
+                
+                // Update UI colors
+                applyThemeToUI();
+                
+                status.textContent = `Switched to ${themes[currentTheme].name} theme`;
+            }
+        }
+        
+        function applyThemeToUI() {
+            const theme = themes[currentTheme];
+            const ui = document.getElementById('ui');
+            const statusEl = document.getElementById('status');
+            
+            ui.style.background = theme.uiBackground;
+            ui.style.borderColor = theme.uiBorder;
+            statusEl.style.background = theme.uiBackground;
+            statusEl.style.borderColor = theme.uiBorder;
+        }
+        
         function createLighting() {
             // Ambient light for overall scene illumination
-            const ambientLight = new THREE.AmbientLight(0xffa726, 0.4);
+            const ambientLight = new THREE.AmbientLight(themes[currentTheme].light, 0.4);
             scene.add(ambientLight);
             
-            // Directional light simulating sunset
-            const sunsetLight = new THREE.DirectionalLight(0xff6b35, 0.8);
-            sunsetLight.position.set(-1, 1, -1);
-            scene.add(sunsetLight);
+            // Directional light using theme color
+            const directionalLight = new THREE.DirectionalLight(themes[currentTheme].light, 0.8);
+            directionalLight.position.set(-1, 1, -1);
+            scene.add(directionalLight);
         }
         
         function createTerrain() {
             const geometry = new THREE.PlaneGeometry(800, 800, 100, 100);
             geometry.rotateX(-Math.PI / 2);
             
-            // Create initial flowing landscape
+            // Create completely flat landscape initially
             const positions = geometry.attributes.position;
             for (let i = 0; i < positions.count; i++) {
-                const x = positions.getX(i);
-                const z = positions.getZ(i);
-                
-                // Create flowing hills and valleys like ocean waves
-                const wave1 = Math.sin(x * 0.01) * 20;
-                const wave2 = Math.cos(z * 0.008) * 15;
-                const wave3 = Math.sin((x + z) * 0.005) * 25;
-                const noise = Math.random() * 5;
-                
-                const height = wave1 + wave2 + wave3 + noise;
-                positions.setY(i, height);
+                // Set all heights to 0 for perfectly flat terrain
+                positions.setY(i, 0);
             }
             
-            // Blue ocean-like wireframe material
+            // Themed wireframe material
             const material = new THREE.MeshBasicMaterial({
-                color: 0x0077be,  // Ocean blue
+                color: themes[currentTheme].terrain,
                 wireframe: true,
                 transparent: true,
                 opacity: 0.9
@@ -211,10 +340,10 @@
         }
         
         function createSun() {
-            // Main sunset sun sphere
-            const sunGeometry = new THREE.SphereGeometry(25, 32, 32);
+            // Main themed sun sphere - smaller initial size
+            const sunGeometry = new THREE.SphereGeometry(20, 32, 32); // Reduced from 25 to 20
             const sunMaterial = new THREE.MeshBasicMaterial({
-                color: 0xffa500,  // Sunset orange
+                color: themes[currentTheme].sun,
                 transparent: false,
                 opacity: 1.0
             });
@@ -223,11 +352,11 @@
             sun.position.set(0, 150, -300);
             scene.add(sun);
             
-            // Sunset glow effect with warm colors
-            const glowColors = [0xffb347, 0xff8c42, 0xff6b35, 0xff5722]; // Warm sunset colors
+            // Themed glow effect with theme colors - smaller glow layers
+            const glowColors = themes[currentTheme].sunGlow;
             
             for (let i = 1; i <= 4; i++) {
-                const glowGeometry = new THREE.SphereGeometry(25 + (i * 15), 32, 32);
+                const glowGeometry = new THREE.SphereGeometry(20 + (i * 10), 32, 32); // Reduced glow sizes
                 const glowMaterial = new THREE.MeshBasicMaterial({
                     color: glowColors[i - 1],
                     transparent: true,
@@ -243,8 +372,8 @@
                 sun.glows.push(glow);
             }
             
-            // Warm sunset point light
-            const light = new THREE.PointLight(0xffa500, 3, 500);
+            // Themed point light
+            const light = new THREE.PointLight(themes[currentTheme].light, 3, 500);
             light.position.copy(sun.position);
             scene.add(light);
             sun.light = light;
@@ -397,32 +526,21 @@
         }
         
         function animateIdle() {
-            // Gentle flowing ocean waves when not playing music
+            // Keep terrain completely flat when no music is playing
             const positions = terrain.geometry.attributes.position;
-            const time = Date.now() * 0.001;
-            
             for (let i = 0; i < positions.count; i++) {
-                const x = positions.getX(i);
-                const z = positions.getZ(i);
-                
-                // Gentle flowing ocean waves
-                const wave1 = Math.sin(x * 0.01 + time * 0.5) * 20;
-                const wave2 = Math.cos(z * 0.008 + time * 0.3) * 15;
-                const wave3 = Math.sin((x + z) * 0.005 + time * 0.2) * 25;
-                
-                const height = wave1 + wave2 + wave3;
-                positions.setY(i, height);
+                positions.setY(i, 0); // Flat terrain
             }
-            
             positions.needsUpdate = true;
             
-            // Gentle sun pulsing
-            const pulse = Math.sin(time * 0.5) * 0.1 + 1;
+            // Only gentle sun pulsing when not playing music
+            const time = Date.now() * 0.001;
+            const pulse = Math.sin(time * 0.8) * 0.05 + 1; // Very subtle pulse
             sun.scale.set(pulse, pulse, pulse);
             
-            // Maintain sunset colors
-            terrain.material.color.setRGB(0, 0.47, 0.75); // Ocean blue
-            sun.material.color.setRGB(1, 0.65, 0); // Sunset orange
+            // Maintain theme colors
+            terrain.material.color.setHex(themes[currentTheme].terrain);
+            sun.material.color.setHex(themes[currentTheme].sun);
         }
         
         function updateVisualization() {
@@ -432,12 +550,11 @@
             const hasData = dataArray.some(value => value > 0);
             if (!hasData) return;
             
-            // Calculate overall audio intensity
+            // Calculate overall audio intensity for terrain color changes
             const overallIntensity = dataArray.reduce((a, b) => a + b, 0) / (dataArray.length * 255);
             
-            // Update terrain based on frequency data with flowing waves
+            // Update terrain to create hills based on frequency data
             const positions = terrain.geometry.attributes.position;
-            const time = Date.now() * 0.001;
             
             for (let i = 0; i < positions.count; i++) {
                 const x = positions.getX(i);
@@ -445,65 +562,59 @@
                 
                 // Map position to frequency data
                 const normalizedX = (x + 400) / 800; // Normalize to 0-1
-                const normalizedZ = (z + 400) / 800;
                 
                 // Get frequency data for this position
                 const freqIndex = Math.floor(normalizedX * dataArray.length);
                 const audioValue = dataArray[Math.min(freqIndex, dataArray.length - 1)] || 0;
                 const intensity = audioValue / 255;
                 
-                // Create flowing base landscape like ocean waves
-                const baseWave1 = Math.sin(x * 0.01 + time * 2) * 20;
-                const baseWave2 = Math.cos(z * 0.008 + time * 1.5) * 15;
-                const baseWave3 = Math.sin((x + z) * 0.005 + time) * 25;
-                
-                // Add audio-reactive waves
-                const audioWave1 = Math.sin(x * 0.02 + time * 3) * intensity * 40;
-                const audioWave2 = Math.cos(z * 0.015 + time * 2.5) * intensity * 30;
-                const audioWave3 = Math.sin((x - z) * 0.01 + time * 4) * intensity * 35;
-                
-                // Combine waves for flowing ocean effect
-                const height = baseWave1 + baseWave2 + baseWave3 + 
-                              audioWave1 + audioWave2 + audioWave3;
+                // Create hills based on audio frequencies
+                const height = intensity * 60; // Height based on frequency strength
                 
                 positions.setY(i, height);
             }
             
             positions.needsUpdate = true;
             
-            // Make waves more vibrant blue during intense music
-            const blueIntensity = Math.min(1, 0.6 + (overallIntensity * 0.4));
-            terrain.material.color.setRGB(0, 0.47 * blueIntensity, 0.75 * blueIntensity);
+            // Make terrain more vibrant during intense music
+            const baseColor = new THREE.Color(themes[currentTheme].terrain);
+            const intensityMultiplier = Math.min(1, 0.7 + (overallIntensity * 0.3));
+            terrain.material.color.copy(baseColor).multiplyScalar(intensityMultiplier);
             
-            // Update sunset sun based on bass frequencies
-            const bassData = dataArray.slice(0, 10);
+            // Focus on BASS frequencies for sun reactivity (0-5 are the lowest frequencies)
+            const bassData = dataArray.slice(0, 5);
             const bassAverage = bassData.reduce((a, b) => a + b, 0) / bassData.length;
             const bassIntensity = bassAverage / 255;
             
-            // Scale sun with dramatic sunset effect
-            const scale = 1 + (bassIntensity * 2);
+            // Make sun react strongly to bass hits with smaller max size
+            const scale = 1 + (bassIntensity * 0.8); // Reduced from 2 to 0.8
             sun.scale.set(scale, scale, scale);
             
-            // Make sun more intense orange during bass hits
-            const sunIntensity = Math.min(1, 0.8 + (bassIntensity * 0.2));
-            sun.material.color.setRGB(1, 0.65 * sunIntensity, 0);
+            // Make sun more intense during bass hits
+            const baseSunColor = new THREE.Color(themes[currentTheme].sun);
+            const sunIntensityMultiplier = Math.min(1.5, 0.8 + (bassIntensity * 0.7));
+            sun.material.color.copy(baseSunColor).multiplyScalar(sunIntensityMultiplier);
             
-            // Update glow layers with sunset colors
+            // Update glow layers with theme colors - react to bass
             if (sun.glows) {
                 sun.glows.forEach((glow, index) => {
-                    const glowScale = scale + (index * 0.3);
+                    const glowScale = scale + (index * 0.15); // Reduced glow scaling
                     glow.scale.set(glowScale, glowScale, glowScale);
-                    glow.material.opacity = (0.2 / (index + 1)) * (1 + bassIntensity * 2);
+                    glow.material.opacity = (0.2 / (index + 1)) * (1 + bassIntensity * 3); // More opacity reaction to bass
                 });
             }
             
-            // Update warm sunset light intensity
+            // Update themed light intensity - react to bass
             if (sun.light) {
-                sun.light.intensity = 3 + (bassIntensity * 5);
+                sun.light.intensity = 3 + (bassIntensity * 4); // Strong bass reaction
             }
         }
         
         // Event listeners
+        themeSelect.addEventListener('change', (e) => {
+            applyTheme(e.target.value);
+        });
+        
         trackSelect.addEventListener('change', (e) => {
             if (e.target.value) {
                 playTrack(e.target.value);
